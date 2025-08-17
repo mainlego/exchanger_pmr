@@ -231,7 +231,8 @@ async function handleSubmit() {
       window.Telegram.WebApp.showAlert('Предложение создано!');
     }
     
-    router.push(`/offers/${offer._id || offer.id}`);
+    // offer.id уже нормализован в store
+    router.push(`/offers/${offer.id}`);
   } catch (error) {
     console.error('Create offer error:', error);
     

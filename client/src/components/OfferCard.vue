@@ -1,6 +1,6 @@
 <template>
   <router-link 
-    :to="`/offers/${offer.id || offer._id}`"
+    :to="`/offers/${offer.id}`"
     class="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group"
   >
     <div class="relative">

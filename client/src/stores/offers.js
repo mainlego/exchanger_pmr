@@ -28,7 +28,11 @@ export const useOffersStore = defineStore('offers', () => {
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
       
       const response = await api.get('/offers', { params });
-      offers.value = response.data;
+      // Normalize MongoDB _id to id
+      offers.value = response.data.map(offer => ({
+        ...offer,
+        id: offer._id || offer.id
+      }));
     } catch (error) {
       console.error('Fetch offers error:', error);
     } finally {
@@ -39,6 +43,13 @@ export const useOffersStore = defineStore('offers', () => {
   async function fetchOffer(id) {
     try {
       const response = await api.get(`/offers/${id}`);
+      // Normalize MongoDB _id to id
+      if (response.data) {
+        return {
+          ...response.data,
+          id: response.data._id || response.data.id
+        };
+      }
       return response.data;
     } catch (error) {
       console.error('Fetch offer error:', error);
@@ -52,12 +63,18 @@ export const useOffersStore = defineStore('offers', () => {
       const response = await api.post('/offers', offerData);
       console.log('Offer created:', response.data);
       
+      // Normalize MongoDB _id to id
+      const normalizedOffer = response.data ? {
+        ...response.data,
+        id: response.data._id || response.data.id
+      } : response.data;
+      
       // Add to local store
-      if (response.data) {
-        offers.value.unshift(response.data);
+      if (normalizedOffer) {
+        offers.value.unshift(normalizedOffer);
       }
       
-      return response.data;
+      return normalizedOffer;
     } catch (error) {
       console.error('Create offer error:', error.response?.data || error);
       throw error;
@@ -67,11 +84,16 @@ export const useOffersStore = defineStore('offers', () => {
   async function updateOffer(id, updates) {
     try {
       const response = await api.put(`/offers/${id}`, updates);
-      const index = offers.value.findIndex(o => o.id === id);
+      const normalizedOffer = response.data ? {
+        ...response.data,
+        id: response.data._id || response.data.id
+      } : response.data;
+      
+      const index = offers.value.findIndex(o => (o.id === id || o._id === id));
       if (index !== -1) {
-        offers.value[index] = response.data;
+        offers.value[index] = normalizedOffer;
       }
-      return response.data;
+      return normalizedOffer;
     } catch (error) {
       console.error('Update offer error:', error);
       throw error;
@@ -81,7 +103,7 @@ export const useOffersStore = defineStore('offers', () => {
   async function deleteOffer(id) {
     try {
       await api.delete(`/offers/${id}`);
-      const index = offers.value.findIndex(o => o.id === id);
+      const index = offers.value.findIndex(o => (o.id === id || o._id === id));
       if (index !== -1) {
         offers.value[index].is_active = false;
       }
@@ -112,13 +134,21 @@ export const useOffersStore = defineStore('offers', () => {
   
   // WebSocket handlers
   function handleNewOffer(offer) {
-    offers.value.unshift(offer);
+    const normalizedOffer = {
+      ...offer,
+      id: offer._id || offer.id
+    };
+    offers.value.unshift(normalizedOffer);
   }
   
   function handleOfferUpdate(offer) {
-    const index = offers.value.findIndex(o => o.id === offer.id);
+    const normalizedOffer = {
+      ...offer,
+      id: offer._id || offer.id
+    };
+    const index = offers.value.findIndex(o => (o.id === normalizedOffer.id || o._id === normalizedOffer.id));
     if (index !== -1) {
-      offers.value[index] = offer;
+      offers.value[index] = normalizedOffer;
     }
   }
   
