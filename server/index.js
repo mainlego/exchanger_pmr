@@ -49,6 +49,13 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Webhook endpoint for Telegram bot
+app.post('/bot*', (req, res) => {
+  // Forward to bot if needed
+  console.log('Received bot webhook');
+  res.sendStatus(200);
+});
+
 // WebSocket для real-time обновлений
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);

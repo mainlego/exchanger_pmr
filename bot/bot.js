@@ -178,16 +178,28 @@ module.exports = {
 // Start bot with webhook for production or polling for development
 if (process.env.NODE_ENV === 'production' && process.env.RENDER) {
   // Use webhook in production on Render
-  const WEBHOOK_DOMAIN = process.env.RENDER_EXTERNAL_URL || process.env.WEB_APP_URL;
+  const WEBHOOK_DOMAIN = process.env.WEBHOOK_URL || process.env.API_URL?.replace('/api', '') || process.env.WEB_APP_URL;
   const WEBHOOK_PATH = `/bot${bot.secretPathComponent()}`;
   
-  bot.telegram.setWebhook(`${WEBHOOK_DOMAIN}${WEBHOOK_PATH}`)
+  const webhookUrl = `${WEBHOOK_DOMAIN}${WEBHOOK_PATH}`;
+  console.log('Setting webhook to:', webhookUrl);
+  
+  bot.telegram.setWebhook(webhookUrl)
     .then(() => {
       console.log('🤖 Bot webhook set successfully');
     })
     .catch((error) => {
       console.error('Failed to set webhook:', error);
-      process.exit(1);
+      // Retry after delay if rate limited
+      if (error.response?.parameters?.retry_after) {
+        setTimeout(() => {
+          bot.telegram.setWebhook(webhookUrl)
+            .then(() => console.log('🤖 Bot webhook set successfully on retry'))
+            .catch(() => process.exit(1));
+        }, (error.response.parameters.retry_after + 1) * 1000);
+      } else {
+        process.exit(1);
+      }
     });
 } else {
   // Use polling in development
