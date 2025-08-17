@@ -4,10 +4,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://vladmelbiz:bfDndkQ
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    await mongoose.connect(MONGODB_URI);
     console.log('✅ MongoDB connected successfully');
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
@@ -85,8 +82,7 @@ const dealMessageSchema = new mongoose.Schema({
   message: { type: String, required: true }
 }, { timestamps: true });
 
-// Indexes
-userSchema.index({ telegram_id: 1 });
+// Indexes (telegram_id already has unique index)
 userSchema.index({ rating: -1 });
 offerSchema.index({ is_active: 1, created_at: -1 });
 offerSchema.index({ currency_from: 1, currency_to: 1 });

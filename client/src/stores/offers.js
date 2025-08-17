@@ -48,11 +48,18 @@ export const useOffersStore = defineStore('offers', () => {
   
   async function createOffer(offerData) {
     try {
+      console.log('Creating offer with data:', offerData);
       const response = await api.post('/offers', offerData);
-      offers.value.unshift(response.data);
+      console.log('Offer created:', response.data);
+      
+      // Add to local store
+      if (response.data) {
+        offers.value.unshift(response.data);
+      }
+      
       return response.data;
     } catch (error) {
-      console.error('Create offer error:', error);
+      console.error('Create offer error:', error.response?.data || error);
       throw error;
     }
   }
