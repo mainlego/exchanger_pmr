@@ -41,3 +41,7 @@ services:
         value: https://p2p-exchange-api.onrender.com/api
       - key: WEB_APP_URL
         value: https://p2p-exchange-pmr.onrender.com
+      - key: NODE_ENV
+        value: production
+      - key: RENDER
+        value: true

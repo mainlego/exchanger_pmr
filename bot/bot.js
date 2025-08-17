@@ -175,12 +175,34 @@ module.exports = {
   sendNewReviewNotification
 };
 
-// Start bot
-bot.launch().then(() => {
-  console.log('🤖 Bot started successfully');
-}).catch((error) => {
-  console.error('Failed to start bot:', error);
-});
+// Start bot with webhook for production or polling for development
+if (process.env.NODE_ENV === 'production' && process.env.RENDER) {
+  // Use webhook in production on Render
+  const WEBHOOK_DOMAIN = process.env.RENDER_EXTERNAL_URL || process.env.WEB_APP_URL;
+  const WEBHOOK_PATH = `/bot${bot.secretPathComponent()}`;
+  
+  bot.telegram.setWebhook(`${WEBHOOK_DOMAIN}${WEBHOOK_PATH}`)
+    .then(() => {
+      console.log('🤖 Bot webhook set successfully');
+    })
+    .catch((error) => {
+      console.error('Failed to set webhook:', error);
+      process.exit(1);
+    });
+} else {
+  // Use polling in development
+  bot.launch({
+    dropPendingUpdates: true // Ignore old messages
+  }).then(() => {
+    console.log('🤖 Bot started successfully in polling mode');
+  }).catch((error) => {
+    console.error('Failed to start bot:', error);
+    if (error.response?.error_code === 409) {
+      console.error('Another bot instance is already running. Please stop it first.');
+      process.exit(1);
+    }
+  });
+}
 
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
