@@ -185,23 +185,40 @@ console.log('Environment:', {
   WEB_APP_URL: process.env.WEB_APP_URL
 });
 
-// Always use polling mode for now
-bot.launch({
-  dropPendingUpdates: true // Ignore old messages
-}).then(() => {
-  console.log('🤖 Bot started successfully');
-}).catch((error) => {
-  console.error('Failed to start bot:', error);
-  if (error.response?.error_code === 409) {
-    console.error('Another bot instance is already running. Please stop it first.');
+// Function to start bot with proper cleanup
+async function startBot() {
+  try {
+    // First, delete any existing webhook
+    console.log('Deleting webhook...');
+    await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+    console.log('Webhook deleted');
+    
+    // Wait a bit to ensure cleanup
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Now start with polling
+    await bot.launch({
+      dropPendingUpdates: true,
+      allowedUpdates: [] // Receive all update types
+    });
+    
+    console.log('🤖 Bot started successfully in polling mode');
+  } catch (error) {
+    console.error('Failed to start bot:', error);
+    
+    if (error.response?.error_code === 409) {
+      console.error('Conflict detected. Waiting 10 seconds before retry...');
+      setTimeout(() => startBot(), 10000);
+    } else {
+      // For other errors, retry after 5 seconds
+      console.error('Retrying in 5 seconds...');
+      setTimeout(() => startBot(), 5000);
+    }
   }
-  // Don't exit, keep trying
-  setTimeout(() => {
-    bot.launch({ dropPendingUpdates: true })
-      .then(() => console.log('🤖 Bot started on retry'))
-      .catch((err) => console.error('Retry failed:', err));
-  }, 5000);
-});
+}
+
+// Start the bot
+startBot();
 
 // Create simple HTTP server for health checks
 const PORT = process.env.PORT || 3001;
