@@ -1,0 +1,75 @@
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
+const rateLimit = require('express-rate-limit');
+
+const { connectDB } = require('./db');
+const authRoutes = require('./routes/auth');
+const offersRoutes = require('./routes/offers');
+const usersRoutes = require('./routes/users');
+const dealsRoutes = require('./routes/deals');
+const reviewsRoutes = require('./routes/reviews');
+
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    credentials: true
+  }
+});
+
+const PORT = process.env.PORT || 5000;
+
+// Middleware
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
+app.use(express.json());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use('/api', limiter);
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/offers', offersRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/deals', dealsRoutes);
+app.use('/api/reviews', reviewsRoutes);
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// WebSocket для real-time обновлений
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
+  socket.on('subscribe:offers', (filters) => {
+    socket.join('offers');
+    if (filters?.currency) {
+      socket.join(`currency:${filters.currency}`);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+// Экспорт io для использования в других модулях
+app.locals.io = io;
+
+// Start server
+httpServer.listen(PORT, async () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  await connectDB();
+});

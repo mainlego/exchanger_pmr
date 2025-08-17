@@ -1,44 +1,27 @@
 {
-  "name": "exchange-miniapp",
+  "name": "p2p-exchange-pmr",
   "version": "1.0.0",
   "private": true,
-  "description": "Telegram Mini App для обменника валют в Приднестровье",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "description": "P2P платформа для обмена валют в Приднестровье",
   "scripts": {
-    "dev": "npm run dev --workspaces",
-    "build": "npm run build --workspaces",
-    "build:api": "npm run build -w @exchange/api",
-    "build:web": "npm run build -w @exchange/web",
-    "build:bot": "npm run build -w @exchange/bot",
-    "start:api": "npm run start -w @exchange/api",
-    "start:web": "npm run preview -w @exchange/web",
-    "start:bot": "npm run start -w @exchange/bot",
-    "web:dev": "npm run dev -w @exchange/web",
-    "api:dev": "npm run dev -w @exchange/api",
-    "bot:dev": "npm run dev -w @exchange/bot",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "install:all": "npm install"
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\" \"npm run bot:dev\"",
+    "server:dev": "cd server && npm run dev",
+    "client:dev": "cd client && npm run dev",
+    "bot:dev": "cd bot && npm run dev",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install && cd ../bot && npm install",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start"
   },
   "keywords": [
+    "p2p",
+    "exchange",
     "telegram",
     "mini-app",
-    "exchange",
     "pmr"
   ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^20.11.17",
-    "typescript": "^5.3.3",
-    "prettier": "^3.2.5",
-    "eslint": "^8.57.0"
-  },
-  "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=10.0.0"
+    "concurrently": "^8.2.2"
   }
 }

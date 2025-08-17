@@ -1,167 +1,102 @@
-# 💱 Exchange PMR - Telegram Mini App
+# P2P Exchange PMR
 
-Telegram Mini App для обменника валют в Приднестровье с real-time курсами, калькулятором и системой бронирования.
+Платформа для прямого обмена валют между людьми в Приднестровье через Telegram Mini App.
 
-## 🚀 Функционал
+## Функционал
 
-- 📊 Актуальные курсы валют (USD, EUR, MDL к рублю ПМР)
-- 🧮 Калькулятор обмена с комиссией
-- 📝 Создание и отслеживание заявок на обмен
-- 🏢 Выбор офиса или доставки
-- 📈 Графики изменения курсов
-- 👤 Личный кабинет со статистикой
-- 🎁 Реферальная программа
-- 🔔 Real-time обновления через WebSocket
+- 💱 Создание и управление предложениями обмена валют
+- 🔍 Поиск предложений с фильтрами по валютам, суммам и районам
+- 🤝 Система сделок между пользователями
+- ⭐ Рейтинги и отзывы после завершения сделок
+- 📱 Полная интеграция с Telegram
+- 🔔 Уведомления о новых сделках и отзывах
+- 💬 Прямая связь через Telegram
 
-## 🛠 Технологии
+## Технологии
 
-### Frontend
-- Vue 3 (Composition API)
-- TypeScript
-- Tailwind CSS
-- Pinia
-- Telegram Web App API
+- **Frontend**: Vue 3, Tailwind CSS, Vite
+- **Backend**: Node.js, Express, PostgreSQL
+- **Bot**: Telegraf
+- **Real-time**: Socket.io
+- **Auth**: Telegram Web App API
 
-### Backend
-- Node.js + Express
-- TypeScript
-- PostgreSQL
-- Redis
-- Socket.io
-- Bull.js (очереди)
+## Установка
 
-## 📦 Установка
-
-### Требования
-- Node.js 20+
-- PostgreSQL 15+
-- Redis 7+
-- npm 10+
-
-### Шаги установки
-
-1. Клонируйте репозиторий:
-```bash
-git clone https://github.com/your-repo/exchange-pmr.git
-cd exchange-pmr
-```
-
+1. Клонируйте репозиторий
 2. Установите зависимости:
 ```bash
-npm install
+npm run install:all
 ```
 
-3. Создайте файл `.env` на основе `.env.example`:
+3. Настройте PostgreSQL и создайте базу данных `p2p_exchange`
+
+4. Скопируйте и настройте .env файлы:
 ```bash
-cp .env.example .env
-# Отредактируйте .env и добавьте ваши настройки
+cp server/.env.example server/.env
+cp bot/.env.example bot/.env
 ```
 
-4. Запустите базу данных и Redis через Docker:
-```bash
-docker-compose up -d postgres redis
-```
+5. Обновите BOT_TOKEN в .env файлах
 
-5. Выполните миграции базы данных:
-```bash
-npm run -w @exchange/api db:migrate
-```
-
-## 🚀 Запуск
-
-### Режим разработки
-
-Запуск всех сервисов:
-```bash
-# Frontend
-npm run web:dev
-
-# Backend (в другом терминале)
-npm run api:dev
-
-# Bot (в третьем терминале)
-npm run bot:dev
-```
-
-### Production через Docker
+## Запуск в режиме разработки
 
 ```bash
-docker-compose up -d
+npm run dev
 ```
 
-## 📱 Настройка Telegram Bot
+Это запустит:
+- Server: http://localhost:5000
+- Client: http://localhost:3000
+- Bot: Telegram bot
 
-1. Создайте бота через [@BotFather](https://t.me/botfather)
-2. Получите токен бота
-3. Включите режим Mini App:
-   ```
-   /setmenubutton
-   Выберите вашего бота
-   Введите URL вашего Mini App
-   ```
-4. Добавьте токен в `.env`:
-   ```
-   BOT_TOKEN=your_bot_token_here
-   ```
-
-## 🗂 Структура проекта
+## Структура проекта
 
 ```
-exchange-miniapp/
-├── apps/
-│   ├── web/          # Vue 3 Mini App
-│   ├── api/          # Express API
-│   └── bot/          # Telegram Bot
-├── packages/
-│   ├── shared/       # Общие типы
-│   └── database/     # Модели БД
-└── docker/           # Docker конфигурации
+/
+├── client/          # Vue 3 frontend
+├── server/          # Express backend
+│   ├── routes/      # API endpoints
+│   ├── middleware/  # Auth middleware
+│   └── db.js        # Database setup
+├── bot/             # Telegram bot
+└── package.json     # Root package
 ```
 
-## 📝 API Endpoints
+## API Endpoints
 
-### Авторизация
-- `POST /api/auth/telegram` - Вход через Telegram
-- `GET /api/auth/me` - Текущий пользователь
+- `POST /api/auth/telegram` - Авторизация через Telegram
+- `GET /api/offers` - Список предложений
+- `POST /api/offers` - Создать предложение
+- `GET /api/deals` - Список сделок
+- `POST /api/deals` - Создать сделку
+- `POST /api/reviews` - Оставить отзыв
+- `GET /api/users/:id` - Профиль пользователя
 
-### Курсы валют
-- `GET /api/rates/current` - Текущие курсы
-- `GET /api/rates/history` - История курсов
-- `POST /api/calculate` - Расчет обмена
+## Деплой
 
-### Операции
-- `GET /api/operations` - Список операций
-- `POST /api/operations` - Создать операцию
-- `GET /api/operations/:code` - Детали операции
-- `POST /api/operations/:id/cancel` - Отменить
+### Frontend (Render)
+1. Создайте Static Site на Render
+2. Build Command: `cd client && npm install && npm run build`
+3. Publish Directory: `client/dist`
 
-## 🔧 Скрипты
+### Backend (Render)
+1. Создайте Web Service на Render
+2. Build Command: `cd server && npm install`
+3. Start Command: `cd server && npm start`
+4. Добавьте PostgreSQL database
 
-```json
-{
-  "dev": "Запуск всех сервисов в dev режиме",
-  "build": "Сборка всех приложений",
-  "web:dev": "Запуск frontend",
-  "api:dev": "Запуск backend",
-  "bot:dev": "Запуск бота",
-  "docker:up": "Запуск через Docker",
-  "docker:down": "Остановка Docker"
-}
-```
+### Bot (Render)
+1. Создайте Background Worker на Render
+2. Build Command: `cd bot && npm install`
+3. Start Command: `cd bot && npm start`
 
-## 🔐 Безопасность
+## Безопасность
 
-- Валидация Telegram InitData
-- Rate limiting
-- SQL injection защита
-- XSS защита
-- HTTPS only в production
+- Все данные проверяются через Telegram InitData
+- JWT токены для сессий
+- Rate limiting на API
+- Валидация всех входных данных
 
-## 📄 Лицензия
+## Лицензия
 
 MIT
-
-## 👥 Контакты
-
-- Telegram: [@pmr_exchange_support](https://t.me/pmr_exchange_support)
-- Email: support@exchange-pmr.com
