@@ -11,7 +11,12 @@ export function useWebSocket() {
   function connect() {
     if (socket) return;
     
-    socket = io('/', {
+    // Determine WebSocket URL based on environment
+    const wsUrl = window.location.hostname !== 'localhost' 
+      ? 'https://p2p-exchange-api.onrender.com'
+      : '/';
+    
+    socket = io(wsUrl, {
       transports: ['websocket'],
       upgrade: false
     });

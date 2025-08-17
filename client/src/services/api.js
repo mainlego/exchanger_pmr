@@ -1,7 +1,17 @@
 import axios from 'axios';
 
+// Determine API URL based on environment
+const getApiUrl = () => {
+  // In production, use the actual API URL
+  if (window.location.hostname !== 'localhost') {
+    return 'https://p2p-exchange-api.onrender.com/api';
+  }
+  // In development, use proxy
+  return '/api';
+};
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getApiUrl(),
   headers: {
     'Content-Type': 'application/json'
   }
