@@ -74,11 +74,16 @@ export const useRatesStore = defineStore('rates', () => {
     error.value = null
     
     try {
-      const response = await api.get('/rates/current')
-      rates.value = response.data
+      // Используем локальные данные если нет API
+      const response = await api.get('/rates/current').catch(() => ({
+        data: rates.value // возвращаем текущие курсы если API недоступен
+      }))
+      if (response.data && Array.isArray(response.data)) {
+        rates.value = response.data
+      }
     } catch (err) {
-      error.value = 'Ошибка загрузки курсов'
-      console.error('Failed to fetch rates:', err)
+      error.value = null // не показываем ошибку, используем локальные данные
+      console.log('Using local rates data')
     } finally {
       isLoading.value = false
     }

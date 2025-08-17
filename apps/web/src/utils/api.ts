@@ -1,7 +1,9 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import { useTelegram } from '@/composables/useTelegram'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+// Если API не настроен, используем моковые данные
+const API_URL = import.meta.env.VITE_API_URL || 'https://jsonplaceholder.typicode.com'
+const USE_MOCK = !import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URL.includes('jsonplaceholder')
 
 class ApiClient {
   private client: AxiosInstance

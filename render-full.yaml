@@ -1,0 +1,68 @@
+services:
+  # Frontend - Static Site
+  - type: web
+    name: pmr-exchange-web
+    env: static
+    buildCommand: cd apps/web && npm install && npm run build
+    staticPublishPath: ./apps/web/dist
+    pullRequestPreviewsEnabled: false
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: Access-Control-Allow-Origin
+        value: "*"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://pmr-exchange-api.onrender.com/api
+      - key: VITE_WS_URL
+        value: wss://pmr-exchange-api.onrender.com
+
+  # Backend API (упрощенная версия без БД)
+  - type: web
+    name: pmr-exchange-api
+    env: node
+    buildCommand: cd apps/api && npm install && npm run build
+    startCommand: cd apps/api && npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: BOT_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        value: postgresql://postgres:postgres@localhost:5432/exchange_pmr
+      - key: REDIS_URL
+        value: redis://localhost:6379
+      - key: CLIENT_URL
+        fromService:
+          type: web
+          name: pmr-exchange-web
+          property: url
+
+  # Telegram Bot
+  - type: web
+    name: pmr-exchange-bot
+    env: node
+    buildCommand: cd apps/bot && npm install && npm run build
+    startCommand: cd apps/bot && npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: BOT_TOKEN
+        sync: false
+      - key: CLIENT_URL
+        fromService:
+          type: web
+          name: pmr-exchange-web
+          property: url
