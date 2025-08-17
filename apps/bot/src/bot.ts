@@ -1,4 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api'
+import express from 'express'
 import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -9,13 +10,36 @@ const __dirname = path.dirname(__filename)
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
 const token = process.env.BOT_TOKEN
+const PORT = process.env.PORT || 10000
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
 if (!token) {
   console.error('❌ BOT_TOKEN не найден в .env файле')
   process.exit(1)
 }
 
-const bot = new TelegramBot(token, { polling: true })
+// Создаем Express сервер для Render
+const app = express()
+app.use(express.json())
+
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({ status: 'Bot is running', timestamp: new Date().toISOString() })
+})
+
+const bot = IS_PRODUCTION 
+  ? new TelegramBot(token, { webHook: true })
+  : new TelegramBot(token, { polling: true })
+
+if (IS_PRODUCTION) {
+  const webhookUrl = `https://${process.env.RENDER_EXTERNAL_HOSTNAME || 'pmr-exchange-bot.onrender.com'}/bot${token}`
+  bot.setWebHook(webhookUrl)
+  
+  app.post(`/bot${token}`, (req, res) => {
+    bot.processUpdate(req.body)
+    res.sendStatus(200)
+  })
+}
 
 const WEBAPP_URL = process.env.CLIENT_URL || 'https://your-app-url.com'
 
@@ -330,6 +354,15 @@ bot.on('polling_error', (error) => {
   console.error('Polling error:', error)
 })
 
-console.log('🤖 Бот запущен и готов к работе!')
-console.log(`📱 Webapp URL: ${WEBAPP_URL}`)
-console.log('✅ Все системы работают нормально')
+// Запускаем Express сервер для Render
+if (IS_PRODUCTION) {
+  app.listen(PORT, () => {
+    console.log(`🌐 Express server running on port ${PORT}`)
+    console.log('🤖 Бот работает в режиме webhook')
+    console.log(`📱 Webapp URL: ${WEBAPP_URL}`)
+  })
+} else {
+  console.log('🤖 Бот запущен в режиме polling')
+  console.log(`📱 Webapp URL: ${WEBAPP_URL}`)
+  console.log('✅ Все системы работают нормально')
+}

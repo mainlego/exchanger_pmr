@@ -1,0 +1,18 @@
+services:
+  # Telegram Bot - можно задеплоить бесплатно
+  - type: web
+    name: pmr-exchange-bot
+    env: node
+    plan: free
+    buildCommand: cd apps/bot && npm install && npm run build
+    startCommand: cd apps/bot && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BOT_TOKEN
+        sync: false  # Добавите вручную в Render
+      - key: CLIENT_URL
+        value: https://exchangepmr.vercel.app  # URL вашего frontend
+      - key: PORT
+        value: 10000
+    healthCheckPath: /
