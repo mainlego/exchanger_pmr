@@ -29,11 +29,12 @@ services:
         value: SAMEORIGIN
 
   # Bot service
-  - type: worker
+  - type: web
     name: p2p-exchange-bot
     env: node
     buildCommand: cd bot && npm install
     startCommand: cd bot && npm start
+    healthCheckPath: /
     envVars:
       - key: BOT_TOKEN
         value: 8200049903:AAETV6_6XOLA6SP-jaW2Hizsm5hVjv_p5CY

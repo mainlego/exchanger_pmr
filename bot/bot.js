@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Telegraf, Markup } = require('telegraf');
 const axios = require('axios');
+const http = require('http');
 
 const bot = new Telegraf(process.env.BOT_TOKEN || '8200049903:AAETV6_6XOLA6SP-jaW2Hizsm5hVjv_p5CY');
 const API_URL = process.env.API_URL || 'http://localhost:5000/api';
@@ -175,47 +176,55 @@ module.exports = {
   sendNewReviewNotification
 };
 
-// Start bot with webhook for production or polling for development
-if (process.env.NODE_ENV === 'production' && process.env.RENDER) {
-  // Use webhook in production on Render
-  const WEBHOOK_DOMAIN = process.env.WEBHOOK_URL || process.env.API_URL?.replace('/api', '') || process.env.WEB_APP_URL;
-  const WEBHOOK_PATH = `/bot${bot.secretPathComponent()}`;
-  
-  const webhookUrl = `${WEBHOOK_DOMAIN}${WEBHOOK_PATH}`;
-  console.log('Setting webhook to:', webhookUrl);
-  
-  bot.telegram.setWebhook(webhookUrl)
-    .then(() => {
-      console.log('🤖 Bot webhook set successfully');
-    })
-    .catch((error) => {
-      console.error('Failed to set webhook:', error);
-      // Retry after delay if rate limited
-      if (error.response?.parameters?.retry_after) {
-        setTimeout(() => {
-          bot.telegram.setWebhook(webhookUrl)
-            .then(() => console.log('🤖 Bot webhook set successfully on retry'))
-            .catch(() => process.exit(1));
-        }, (error.response.parameters.retry_after + 1) * 1000);
-      } else {
-        process.exit(1);
-      }
-    });
-} else {
-  // Use polling in development
-  bot.launch({
-    dropPendingUpdates: true // Ignore old messages
-  }).then(() => {
-    console.log('🤖 Bot started successfully in polling mode');
-  }).catch((error) => {
-    console.error('Failed to start bot:', error);
-    if (error.response?.error_code === 409) {
-      console.error('Another bot instance is already running. Please stop it first.');
-      process.exit(1);
-    }
-  });
-}
+// Start bot
+console.log('Starting bot...');
+console.log('Environment:', {
+  NODE_ENV: process.env.NODE_ENV,
+  RENDER: process.env.RENDER,
+  BOT_TOKEN: process.env.BOT_TOKEN ? 'Set' : 'Not set',
+  WEB_APP_URL: process.env.WEB_APP_URL
+});
+
+// Always use polling mode for now
+bot.launch({
+  dropPendingUpdates: true // Ignore old messages
+}).then(() => {
+  console.log('🤖 Bot started successfully');
+}).catch((error) => {
+  console.error('Failed to start bot:', error);
+  if (error.response?.error_code === 409) {
+    console.error('Another bot instance is already running. Please stop it first.');
+  }
+  // Don't exit, keep trying
+  setTimeout(() => {
+    bot.launch({ dropPendingUpdates: true })
+      .then(() => console.log('🤖 Bot started on retry'))
+      .catch((err) => console.error('Retry failed:', err));
+  }, 5000);
+});
+
+// Create simple HTTP server for health checks
+const PORT = process.env.PORT || 3001;
+const server = http.createServer((req, res) => {
+  if (req.url === '/' || req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', bot: 'running' }));
+  } else {
+    res.writeHead(404);
+    res.end();
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`Health check server running on port ${PORT}`);
+});
 
 // Enable graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+process.once('SIGINT', () => {
+  bot.stop('SIGINT');
+  server.close();
+});
+process.once('SIGTERM', () => {
+  bot.stop('SIGTERM');
+  server.close();
+});
