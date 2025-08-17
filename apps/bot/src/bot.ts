@@ -1,13 +1,9 @@
-import TelegramBot from 'node-telegram-bot-api'
-import express from 'express'
-import dotenv from 'dotenv'
-import path from 'path'
-import { fileURLToPath } from 'url'
+const TelegramBot = require('node-telegram-bot-api')
+const express = require('express')
+const dotenv = require('dotenv')
+const path = require('path')
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 
 const token = process.env.BOT_TOKEN
 const PORT = process.env.PORT || 10000
