@@ -2,7 +2,80 @@ const router = require('express').Router();
 const { User, Deal, Review, Favorite } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 
-// Получить профиль пользователя
+// Получить мой профиль - ДОЛЖЕН БЫТЬ ПЕРЕД /:id
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    console.log('Getting profile for user:', req.user.id);
+    const user = await User.findById(req.user.id).lean();
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ error: 'Failed to get profile' });
+  }
+});
+
+// Получить избранных пользователей
+router.get('/favorites', authMiddleware, async (req, res) => {
+  try {
+    const favorites = await Favorite.find({ user_id: req.user.id })
+      .populate('favorite_user_id', 'telegram_id username first_name last_name photo_url rating deals_count is_verified is_online last_seen')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Форматируем ответ
+    const formattedFavorites = favorites.map(fav => ({
+      ...fav.favorite_user_id,
+      favorited_at: fav.createdAt
+    }));
+
+    res.json(formattedFavorites);
+  } catch (error) {
+    console.error('Get favorites error:', error);
+    res.status(500).json({ error: 'Failed to get favorites' });
+  }
+});
+
+// Поиск пользователей
+router.get('/search', async (req, res) => {
+  try {
+    const { q, min_rating, verified_only } = req.query;
+    
+    const filter = {};
+
+    if (q) {
+      filter.$or = [
+        { username: { $regex: q, $options: 'i' } },
+        { first_name: { $regex: q, $options: 'i' } },
+        { last_name: { $regex: q, $options: 'i' } }
+      ];
+    }
+
+    if (min_rating) {
+      filter.rating = { $gte: parseFloat(min_rating) };
+    }
+
+    if (verified_only === 'true') {
+      filter.is_verified = true;
+    }
+
+    const users = await User.find(filter)
+      .sort({ rating: -1, deals_count: -1 })
+      .limit(50)
+      .lean();
+
+    res.json(users);
+  } catch (error) {
+    console.error('Search users error:', error);
+    res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
+// Получить профиль пользователя по ID
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -42,22 +115,6 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to get user' });
-  }
-});
-
-// Получить мой профиль
-router.get('/me', authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).lean();
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json(user);
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ error: 'Failed to get profile' });
   }
 });
 
@@ -146,62 +203,6 @@ router.post('/:id/favorite', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Toggle favorite error:', error);
     res.status(500).json({ error: 'Failed to toggle favorite' });
-  }
-});
-
-// Получить избранных пользователей
-router.get('/favorites', authMiddleware, async (req, res) => {
-  try {
-    const favorites = await Favorite.find({ user_id: req.user.id })
-      .populate('favorite_user_id', 'telegram_id username first_name last_name photo_url rating deals_count is_verified is_online last_seen')
-      .sort({ createdAt: -1 })
-      .lean();
-
-    // Форматируем ответ
-    const formattedFavorites = favorites.map(fav => ({
-      ...fav.favorite_user_id,
-      favorited_at: fav.createdAt
-    }));
-
-    res.json(formattedFavorites);
-  } catch (error) {
-    console.error('Get favorites error:', error);
-    res.status(500).json({ error: 'Failed to get favorites' });
-  }
-});
-
-// Поиск пользователей
-router.get('/search', async (req, res) => {
-  try {
-    const { q, min_rating, verified_only } = req.query;
-    
-    const filter = {};
-
-    if (q) {
-      filter.$or = [
-        { username: { $regex: q, $options: 'i' } },
-        { first_name: { $regex: q, $options: 'i' } },
-        { last_name: { $regex: q, $options: 'i' } }
-      ];
-    }
-
-    if (min_rating) {
-      filter.rating = { $gte: parseFloat(min_rating) };
-    }
-
-    if (verified_only === 'true') {
-      filter.is_verified = true;
-    }
-
-    const users = await User.find(filter)
-      .sort({ rating: -1, deals_count: -1 })
-      .limit(50)
-      .lean();
-
-    res.json(users);
-  } catch (error) {
-    console.error('Search users error:', error);
-    res.status(500).json({ error: 'Failed to search users' });
   }
 });
 

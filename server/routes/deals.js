@@ -1,6 +1,7 @@
 const router = require('express').Router();
-const db = require('../db');
+const { Deal, Offer, User, DealMessage } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { notifyNewDeal, notifyDealStatusChange } = require('../services/notifications');
 
 // Создать новую сделку
 router.post('/', authMiddleware, async (req, res) => {
@@ -9,52 +10,49 @@ router.post('/', authMiddleware, async (req, res) => {
     const taker_id = req.user.id;
 
     // Проверяем предложение
-    const offer = await db.query(
-      'SELECT * FROM offers WHERE id = $1 AND is_active = true',
-      [offer_id]
-    );
+    const offer = await Offer.findById(offer_id)
+      .populate('user_id', 'username first_name last_name telegram_id');
 
-    if (offer.rows.length === 0) {
+    if (!offer || !offer.is_active) {
       return res.status(404).json({ error: 'Offer not found or inactive' });
     }
 
-    const offerData = offer.rows[0];
-
     // Проверяем, что пользователь не создает сделку сам с собой
-    if (offerData.user_id === taker_id) {
+    if (offer.user_id._id.toString() === taker_id) {
       return res.status(400).json({ error: 'Cannot create deal with yourself' });
     }
 
     // Проверяем лимиты суммы
-    if (amount < offerData.min_amount || amount > offerData.max_amount) {
+    if (amount < offer.min_amount || amount > offer.max_amount) {
       return res.status(400).json({ 
-        error: `Amount must be between ${offerData.min_amount} and ${offerData.max_amount}` 
+        error: `Amount must be between ${offer.min_amount} and ${offer.max_amount}` 
       });
     }
 
     // Создаем сделку
-    const result = await db.query(
-      `INSERT INTO deals (offer_id, maker_id, taker_id, amount, message, status)
-       VALUES ($1, $2, $3, $4, $5, 'pending')
-       RETURNING *`,
-      [offer_id, offerData.user_id, taker_id, amount, message]
-    );
+    const deal = await Deal.create({
+      offer_id: offer._id,
+      maker_id: offer.user_id._id,
+      taker_id,
+      amount,
+      message,
+      status: 'pending'
+    });
 
-    const deal = result.rows[0];
+    // Получаем информацию о taker
+    const taker = await User.findById(taker_id)
+      .select('username first_name last_name telegram_id');
 
-    // Получаем информацию о пользователях
-    const users = await db.query(
-      'SELECT id, telegram_id, username, first_name FROM users WHERE id IN ($1, $2)',
-      [offerData.user_id, taker_id]
-    );
+    // Отправляем уведомление maker через Telegram
+    await notifyNewDeal(deal, taker.first_name || taker.username || 'Пользователь');
 
     // Отправляем уведомление через WebSocket
     const io = req.app.locals.io;
     if (io) {
-      io.to(`user:${offerData.user_id}`).emit('new_deal', {
-        ...deal,
-        offer: offerData,
-        taker: users.rows.find(u => u.id === taker_id)
+      io.to(`user:${offer.user_id._id}`).emit('new_deal', {
+        ...deal.toObject(),
+        offer: offer.toObject(),
+        taker: taker.toObject()
       });
     }
 
@@ -71,56 +69,34 @@ router.get('/my', authMiddleware, async (req, res) => {
     const { status, role } = req.query;
     const userId = req.user.id;
 
-    let query = `
-      SELECT 
-        d.*,
-        o.type as offer_type,
-        o.currency_from,
-        o.currency_to,
-        o.rate,
-        o.location,
-        o.district,
-        maker.username as maker_username,
-        maker.first_name as maker_first_name,
-        maker.telegram_id as maker_telegram_id,
-        maker.rating as maker_rating,
-        taker.username as taker_username,
-        taker.first_name as taker_first_name,
-        taker.telegram_id as taker_telegram_id,
-        taker.rating as taker_rating
-      FROM deals d
-      JOIN offers o ON d.offer_id = o.id
-      JOIN users maker ON d.maker_id = maker.id
-      JOIN users taker ON d.taker_id = taker.id
-      WHERE 1=1
-    `;
-
-    const params = [];
-    let paramCount = 1;
-
+    // Построение фильтра
+    const filter = {};
+    
     // Фильтр по роли (maker или taker)
     if (role === 'maker') {
-      query += ` AND d.maker_id = $${paramCount++}`;
-      params.push(userId);
+      filter.maker_id = userId;
     } else if (role === 'taker') {
-      query += ` AND d.taker_id = $${paramCount++}`;
-      params.push(userId);
+      filter.taker_id = userId;
     } else {
-      query += ` AND (d.maker_id = $${paramCount} OR d.taker_id = $${paramCount})`;
-      params.push(userId);
-      paramCount++;
+      filter.$or = [{ maker_id: userId }, { taker_id: userId }];
     }
 
     // Фильтр по статусу
     if (status) {
-      query += ` AND d.status = $${paramCount++}`;
-      params.push(status);
+      filter.status = status;
     }
 
-    query += ' ORDER BY d.created_at DESC';
+    const deals = await Deal.find(filter)
+      .populate({
+        path: 'offer_id',
+        select: 'type currency_from currency_to rate location district'
+      })
+      .populate('maker_id', 'username first_name telegram_id rating')
+      .populate('taker_id', 'username first_name telegram_id rating')
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const result = await db.query(query, params);
-    res.json(result.rows);
+    res.json(deals);
   } catch (error) {
     console.error('Get my deals error:', error);
     res.status(500).json({ error: 'Failed to get deals' });
@@ -133,43 +109,21 @@ router.get('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
-    const result = await db.query(`
-      SELECT 
-        d.*,
-        o.type as offer_type,
-        o.currency_from,
-        o.currency_to,
-        o.rate,
-        o.location,
-        o.district,
-        o.comment as offer_comment,
-        maker.username as maker_username,
-        maker.first_name as maker_first_name,
-        maker.last_name as maker_last_name,
-        maker.telegram_id as maker_telegram_id,
-        maker.rating as maker_rating,
-        maker.photo_url as maker_photo_url,
-        taker.username as taker_username,
-        taker.first_name as taker_first_name,
-        taker.last_name as taker_last_name,
-        taker.telegram_id as taker_telegram_id,
-        taker.rating as taker_rating,
-        taker.photo_url as taker_photo_url
-      FROM deals d
-      JOIN offers o ON d.offer_id = o.id
-      JOIN users maker ON d.maker_id = maker.id
-      JOIN users taker ON d.taker_id = taker.id
-      WHERE d.id = $1
-    `, [id]);
+    const deal = await Deal.findById(id)
+      .populate({
+        path: 'offer_id',
+        select: 'type currency_from currency_to rate location district comment'
+      })
+      .populate('maker_id', 'username first_name last_name telegram_id rating photo_url')
+      .populate('taker_id', 'username first_name last_name telegram_id rating photo_url')
+      .lean();
 
-    if (result.rows.length === 0) {
+    if (!deal) {
       return res.status(404).json({ error: 'Deal not found' });
     }
 
-    const deal = result.rows[0];
-
     // Проверяем доступ к сделке
-    if (deal.maker_id !== userId && deal.taker_id !== userId) {
+    if (deal.maker_id._id.toString() !== userId && deal.taker_id._id.toString() !== userId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -188,31 +142,26 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
     const userId = req.user.id;
 
     // Проверяем сделку и права доступа
-    const deal = await db.query(
-      'SELECT * FROM deals WHERE id = $1',
-      [id]
-    );
+    const deal = await Deal.findById(id);
 
-    if (deal.rows.length === 0) {
+    if (!deal) {
       return res.status(404).json({ error: 'Deal not found' });
     }
-
-    const dealData = deal.rows[0];
 
     // Определяем разрешенные переходы статусов
     const allowedTransitions = {
       pending: {
-        accepted: [dealData.maker_id], // Только maker может принять
-        cancelled: [dealData.maker_id, dealData.taker_id] // Оба могут отменить
+        accepted: [deal.maker_id.toString()], // Только maker может принять
+        cancelled: [deal.maker_id.toString(), deal.taker_id.toString()] // Оба могут отменить
       },
       accepted: {
-        completed: [dealData.maker_id, dealData.taker_id], // Оба могут завершить
-        disputed: [dealData.maker_id, dealData.taker_id], // Оба могут оспорить
-        cancelled: [dealData.maker_id, dealData.taker_id] // Оба могут отменить
+        completed: [deal.maker_id.toString(), deal.taker_id.toString()], // Оба могут завершить
+        disputed: [deal.maker_id.toString(), deal.taker_id.toString()], // Оба могут оспорить
+        cancelled: [deal.maker_id.toString(), deal.taker_id.toString()] // Оба могут отменить
       }
     };
 
-    const currentStatus = dealData.status;
+    const currentStatus = deal.status;
     const allowedUsers = allowedTransitions[currentStatus]?.[status];
 
     if (!allowedUsers || !allowedUsers.includes(userId)) {
@@ -222,27 +171,27 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
     }
 
     // Обновляем статус
-    const result = await db.query(
-      `UPDATE deals 
-       SET status = $1, 
-           completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE NULL END
-       WHERE id = $2
-       RETURNING *`,
-      [status, id]
-    );
+    deal.status = status;
+    if (status === 'completed') {
+      deal.completed_at = new Date();
+    }
+    await deal.save();
 
     // Если сделка завершена, обновляем счетчики пользователей
     if (status === 'completed') {
-      await db.query(
-        'UPDATE users SET deals_count = deals_count + 1 WHERE id IN ($1, $2)',
-        [dealData.maker_id, dealData.taker_id]
+      await User.updateMany(
+        { _id: { $in: [deal.maker_id, deal.taker_id] } },
+        { $inc: { deals_count: 1 } }
       );
     }
+
+    // Отправляем уведомление другому участнику через Telegram
+    const otherUserId = userId === deal.maker_id.toString() ? deal.taker_id : deal.maker_id;
+    await notifyDealStatusChange(id, status, otherUserId);
 
     // Отправляем уведомления через WebSocket
     const io = req.app.locals.io;
     if (io) {
-      const otherUserId = userId === dealData.maker_id ? dealData.taker_id : dealData.maker_id;
       io.to(`user:${otherUserId}`).emit('deal_status_changed', {
         deal_id: id,
         status,
@@ -250,7 +199,7 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
       });
     }
 
-    res.json(result.rows[0]);
+    res.json(deal);
   } catch (error) {
     console.error('Update deal status error:', error);
     res.status(500).json({ error: 'Failed to update deal status' });
@@ -265,42 +214,67 @@ router.post('/:id/messages', authMiddleware, async (req, res) => {
     const userId = req.user.id;
 
     // Проверяем доступ к сделке
-    const deal = await db.query(
-      'SELECT maker_id, taker_id FROM deals WHERE id = $1',
-      [id]
-    );
+    const deal = await Deal.findById(id).select('maker_id taker_id');
 
-    if (deal.rows.length === 0) {
+    if (!deal) {
       return res.status(404).json({ error: 'Deal not found' });
     }
 
-    const dealData = deal.rows[0];
-    if (dealData.maker_id !== userId && dealData.taker_id !== userId) {
+    if (deal.maker_id.toString() !== userId && deal.taker_id.toString() !== userId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Добавляем сообщение (можно создать отдельную таблицу deal_messages)
-    const result = await db.query(
-      `INSERT INTO deal_messages (deal_id, user_id, message)
-       VALUES ($1, $2, $3)
-       RETURNING *`,
-      [id, userId, message]
-    );
+    // Добавляем сообщение
+    const dealMessage = await DealMessage.create({
+      deal_id: id,
+      user_id: userId,
+      message
+    });
 
     // Отправляем уведомление другому участнику
     const io = req.app.locals.io;
     if (io) {
-      const otherUserId = userId === dealData.maker_id ? dealData.taker_id : dealData.maker_id;
+      const otherUserId = userId === deal.maker_id.toString() ? deal.taker_id : deal.maker_id;
       io.to(`user:${otherUserId}`).emit('new_deal_message', {
         deal_id: id,
-        message: result.rows[0]
+        message: dealMessage
       });
     }
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(dealMessage);
   } catch (error) {
     console.error('Add message error:', error);
     res.status(500).json({ error: 'Failed to add message' });
+  }
+});
+
+// Получить сообщения сделки
+router.get('/:id/messages', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Проверяем доступ к сделке
+    const deal = await Deal.findById(id).select('maker_id taker_id');
+
+    if (!deal) {
+      return res.status(404).json({ error: 'Deal not found' });
+    }
+
+    if (deal.maker_id.toString() !== userId && deal.taker_id.toString() !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Получаем сообщения
+    const messages = await DealMessage.find({ deal_id: id })
+      .populate('user_id', 'username first_name last_name photo_url')
+      .sort({ createdAt: 1 })
+      .lean();
+
+    res.json(messages);
+  } catch (error) {
+    console.error('Get messages error:', error);
+    res.status(500).json({ error: 'Failed to get messages' });
   }
 });
 
@@ -309,21 +283,36 @@ router.get('/stats', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const stats = await db.query(`
-      SELECT 
-        COUNT(*) FILTER (WHERE status = 'pending') as pending_count,
-        COUNT(*) FILTER (WHERE status = 'accepted') as accepted_count,
-        COUNT(*) FILTER (WHERE status = 'completed') as completed_count,
-        COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled_count,
-        COUNT(*) FILTER (WHERE status = 'disputed') as disputed_count,
-        COUNT(*) as total_count,
-        COUNT(*) FILTER (WHERE maker_id = $1) as as_maker_count,
-        COUNT(*) FILTER (WHERE taker_id = $1) as as_taker_count
-      FROM deals
-      WHERE maker_id = $1 OR taker_id = $1
-    `, [userId]);
+    const [
+      pendingCount,
+      acceptedCount,
+      completedCount,
+      cancelledCount,
+      disputedCount,
+      totalCount,
+      asMakerCount,
+      asTakerCount
+    ] = await Promise.all([
+      Deal.countDocuments({ $or: [{ maker_id: userId }, { taker_id: userId }], status: 'pending' }),
+      Deal.countDocuments({ $or: [{ maker_id: userId }, { taker_id: userId }], status: 'accepted' }),
+      Deal.countDocuments({ $or: [{ maker_id: userId }, { taker_id: userId }], status: 'completed' }),
+      Deal.countDocuments({ $or: [{ maker_id: userId }, { taker_id: userId }], status: 'cancelled' }),
+      Deal.countDocuments({ $or: [{ maker_id: userId }, { taker_id: userId }], status: 'disputed' }),
+      Deal.countDocuments({ $or: [{ maker_id: userId }, { taker_id: userId }] }),
+      Deal.countDocuments({ maker_id: userId }),
+      Deal.countDocuments({ taker_id: userId })
+    ]);
 
-    res.json(stats.rows[0]);
+    res.json({
+      pending_count: pendingCount,
+      accepted_count: acceptedCount,
+      completed_count: completedCount,
+      cancelled_count: cancelledCount,
+      disputed_count: disputedCount,
+      total_count: totalCount,
+      as_maker_count: asMakerCount,
+      as_taker_count: asTakerCount
+    });
   } catch (error) {
     console.error('Get stats error:', error);
     res.status(500).json({ error: 'Failed to get stats' });

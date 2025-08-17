@@ -1,6 +1,7 @@
 const router = require('express').Router();
-const db = require('../db');
+const { Review, Deal, User } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { notifyNewReview } = require('../services/notifications');
 
 // Создать отзыв
 router.post('/', authMiddleware, async (req, res) => {
@@ -14,64 +15,57 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     // Проверяем сделку
-    const deal = await db.query(
-      'SELECT * FROM deals WHERE id = $1 AND status = $2',
-      [deal_id, 'completed']
-    );
+    const deal = await Deal.findById(deal_id);
 
-    if (deal.rows.length === 0) {
+    if (!deal || deal.status !== 'completed') {
       return res.status(404).json({ error: 'Deal not found or not completed' });
     }
 
-    const dealData = deal.rows[0];
-
     // Проверяем, что пользователь участвовал в сделке
-    if (dealData.maker_id !== from_user_id && dealData.taker_id !== from_user_id) {
+    if (deal.maker_id.toString() !== from_user_id && deal.taker_id.toString() !== from_user_id) {
       return res.status(403).json({ error: 'You are not a participant of this deal' });
     }
 
     // Определяем, кому оставляется отзыв
-    const to_user_id = from_user_id === dealData.maker_id ? dealData.taker_id : dealData.maker_id;
+    const to_user_id = from_user_id === deal.maker_id.toString() ? deal.taker_id : deal.maker_id;
 
     // Проверяем, не оставлен ли уже отзыв
-    const existing = await db.query(
-      'SELECT id FROM reviews WHERE deal_id = $1 AND from_user_id = $2',
-      [deal_id, from_user_id]
-    );
+    const existing = await Review.findOne({
+      deal_id,
+      from_user_id
+    });
 
-    if (existing.rows.length > 0) {
+    if (existing) {
       return res.status(400).json({ error: 'Review already exists for this deal' });
     }
 
     // Создаем отзыв
-    const result = await db.query(
-      `INSERT INTO reviews (deal_id, from_user_id, to_user_id, rating, comment)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [deal_id, from_user_id, to_user_id, rating, comment]
-    );
+    const review = await Review.create({
+      deal_id,
+      from_user_id,
+      to_user_id,
+      rating,
+      comment
+    });
 
     // Обновляем рейтинг пользователя
     await updateUserRating(to_user_id);
 
-    // Получаем информацию об авторе отзыва
-    const author = await db.query(
-      'SELECT username, first_name, last_name, photo_url FROM users WHERE id = $1',
-      [from_user_id]
-    );
+    // Заполняем данные об авторе
+    const populatedReview = await Review.findById(review._id)
+      .populate('from_user_id', 'username first_name last_name photo_url')
+      .lean();
 
-    const review = {
-      ...result.rows[0],
-      author: author.rows[0]
-    };
+    // Отправляем уведомление через Telegram
+    await notifyNewReview(populatedReview);
 
     // Отправляем уведомление через WebSocket
     const io = req.app.locals.io;
     if (io) {
-      io.to(`user:${to_user_id}`).emit('new_review', review);
+      io.to(`user:${to_user_id}`).emit('new_review', populatedReview);
     }
 
-    res.status(201).json(review);
+    res.status(201).json(populatedReview);
   } catch (error) {
     console.error('Create review error:', error);
     res.status(500).json({ error: 'Failed to create review' });
@@ -83,24 +77,13 @@ router.get('/deal/:dealId', async (req, res) => {
   try {
     const { dealId } = req.params;
 
-    const result = await db.query(`
-      SELECT 
-        r.*,
-        fu.username as from_username,
-        fu.first_name as from_first_name,
-        fu.last_name as from_last_name,
-        fu.photo_url as from_photo_url,
-        tu.username as to_username,
-        tu.first_name as to_first_name,
-        tu.last_name as to_last_name
-      FROM reviews r
-      JOIN users fu ON r.from_user_id = fu.id
-      JOIN users tu ON r.to_user_id = tu.id
-      WHERE r.deal_id = $1
-      ORDER BY r.created_at DESC
-    `, [dealId]);
+    const reviews = await Review.find({ deal_id: dealId })
+      .populate('from_user_id', 'username first_name last_name photo_url')
+      .populate('to_user_id', 'username first_name last_name')
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.json(result.rows);
+    res.json(reviews);
   } catch (error) {
     console.error('Get deal reviews error:', error);
     res.status(500).json({ error: 'Failed to get reviews' });
@@ -112,35 +95,24 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await db.query(`
-      SELECT 
-        r.*,
-        fu.username as from_username,
-        fu.first_name as from_first_name,
-        fu.last_name as from_last_name,
-        fu.photo_url as from_photo_url,
-        tu.username as to_username,
-        tu.first_name as to_first_name,
-        tu.last_name as to_last_name,
-        tu.photo_url as to_photo_url,
-        d.status as deal_status,
-        d.amount as deal_amount,
-        o.currency_from,
-        o.currency_to,
-        o.type as offer_type
-      FROM reviews r
-      JOIN users fu ON r.from_user_id = fu.id
-      JOIN users tu ON r.to_user_id = tu.id
-      JOIN deals d ON r.deal_id = d.id
-      JOIN offers o ON d.offer_id = o.id
-      WHERE r.id = $1
-    `, [id]);
+    const review = await Review.findById(id)
+      .populate('from_user_id', 'username first_name last_name photo_url')
+      .populate('to_user_id', 'username first_name last_name photo_url')
+      .populate({
+        path: 'deal_id',
+        select: 'status amount',
+        populate: {
+          path: 'offer_id',
+          select: 'currency_from currency_to type'
+        }
+      })
+      .lean();
 
-    if (result.rows.length === 0) {
+    if (!review) {
       return res.status(404).json({ error: 'Review not found' });
     }
 
-    res.json(result.rows[0]);
+    res.json(review);
   } catch (error) {
     console.error('Get review error:', error);
     res.status(500).json({ error: 'Failed to get review' });
@@ -155,12 +127,12 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const userId = req.user.id;
 
     // Проверяем авторство
-    const review = await db.query(
-      'SELECT * FROM reviews WHERE id = $1 AND from_user_id = $2',
-      [id, userId]
-    );
+    const review = await Review.findOne({
+      _id: id,
+      from_user_id: userId
+    });
 
-    if (review.rows.length === 0) {
+    if (!review) {
       return res.status(404).json({ error: 'Review not found or not authorized' });
     }
 
@@ -170,34 +142,17 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
 
     // Обновляем отзыв
-    const updates = [];
-    const values = [];
-    let paramCount = 1;
-
-    if (rating !== undefined) {
-      updates.push(`rating = $${paramCount++}`);
-      values.push(rating);
-    }
-    if (comment !== undefined) {
-      updates.push(`comment = $${paramCount++}`);
-      values.push(comment);
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-
-    values.push(id);
-    const query = `UPDATE reviews SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
-
-    const result = await db.query(query, values);
+    if (rating !== undefined) review.rating = rating;
+    if (comment !== undefined) review.comment = comment;
+    
+    await review.save();
 
     // Обновляем рейтинг пользователя, если изменился рейтинг
     if (rating !== undefined) {
-      await updateUserRating(review.rows[0].to_user_id);
+      await updateUserRating(review.to_user_id);
     }
 
-    res.json(result.rows[0]);
+    res.json(review);
   } catch (error) {
     console.error('Update review error:', error);
     res.status(500).json({ error: 'Failed to update review' });
@@ -211,19 +166,19 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     const userId = req.user.id;
 
     // Проверяем авторство
-    const review = await db.query(
-      'SELECT to_user_id FROM reviews WHERE id = $1 AND from_user_id = $2',
-      [id, userId]
-    );
+    const review = await Review.findOne({
+      _id: id,
+      from_user_id: userId
+    });
 
-    if (review.rows.length === 0) {
+    if (!review) {
       return res.status(404).json({ error: 'Review not found or not authorized' });
     }
 
-    const to_user_id = review.rows[0].to_user_id;
+    const to_user_id = review.to_user_id;
 
     // Удаляем отзыв
-    await db.query('DELETE FROM reviews WHERE id = $1', [id]);
+    await review.deleteOne();
 
     // Обновляем рейтинг пользователя
     await updateUserRating(to_user_id);
@@ -240,20 +195,21 @@ router.get('/user/:userId/stats', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const stats = await db.query(`
-      SELECT 
-        COUNT(*) as total_reviews,
-        AVG(rating) as average_rating,
-        COUNT(*) FILTER (WHERE rating = 5) as five_star,
-        COUNT(*) FILTER (WHERE rating = 4) as four_star,
-        COUNT(*) FILTER (WHERE rating = 3) as three_star,
-        COUNT(*) FILTER (WHERE rating = 2) as two_star,
-        COUNT(*) FILTER (WHERE rating = 1) as one_star
-      FROM reviews
-      WHERE to_user_id = $1
-    `, [userId]);
+    const reviews = await Review.find({ to_user_id: userId }).select('rating');
+    
+    const stats = {
+      total_reviews: reviews.length,
+      average_rating: reviews.length > 0 
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
+        : 0,
+      five_star: reviews.filter(r => r.rating === 5).length,
+      four_star: reviews.filter(r => r.rating === 4).length,
+      three_star: reviews.filter(r => r.rating === 3).length,
+      two_star: reviews.filter(r => r.rating === 2).length,
+      one_star: reviews.filter(r => r.rating === 1).length
+    };
 
-    res.json(stats.rows[0]);
+    res.json(stats);
   } catch (error) {
     console.error('Get review stats error:', error);
     res.status(500).json({ error: 'Failed to get review stats' });
@@ -263,17 +219,15 @@ router.get('/user/:userId/stats', async (req, res) => {
 // Вспомогательная функция для обновления рейтинга пользователя
 async function updateUserRating(userId) {
   try {
-    const result = await db.query(
-      'SELECT AVG(rating) as avg_rating FROM reviews WHERE to_user_id = $1',
-      [userId]
-    );
+    const reviews = await Review.find({ to_user_id: userId }).select('rating');
+    
+    const avgRating = reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      : 0;
 
-    const avgRating = result.rows[0].avg_rating || 0;
-
-    await db.query(
-      'UPDATE users SET rating = $1 WHERE id = $2',
-      [parseFloat(avgRating).toFixed(2), userId]
-    );
+    await User.findByIdAndUpdate(userId, {
+      rating: parseFloat(avgRating.toFixed(2))
+    });
   } catch (error) {
     console.error('Update user rating error:', error);
   }

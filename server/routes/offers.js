@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { Offer, User } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { notifyNewOffer } = require('../services/notifications');
 
 // Получить все активные предложения
 router.get('/', async (req, res) => {
@@ -82,23 +83,29 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    console.log('Creating offer for user:', req.user.id);
+    
     const offer = await Offer.create({
       user_id: req.user.id,
       type,
       currency_from,
       currency_to,
-      amount_from,
-      amount_to: amount_to || amount_from * rate,
-      rate,
-      min_amount: min_amount || amount_from * 0.1,
-      max_amount: max_amount || amount_from,
+      amount_from: parseFloat(amount_from),
+      amount_to: parseFloat(amount_to || amount_from * rate),
+      rate: parseFloat(rate),
+      min_amount: parseFloat(min_amount || amount_from * 0.1),
+      max_amount: parseFloat(max_amount || amount_from),
       location,
       district,
       comment
     });
 
     // Заполняем данные пользователя
-    await offer.populate('user_id', 'username first_name last_name rating deals_count');
+    const populatedOffer = await Offer.findById(offer._id)
+      .populate('user_id', 'username first_name last_name rating deals_count is_verified')
+      .lean();
+    
+    console.log('Offer created:', populatedOffer);
 
     // Отправить уведомление через WebSocket
     const io = req.app.locals.io;
@@ -107,7 +114,23 @@ router.post('/', authMiddleware, async (req, res) => {
       io.to(`currency:${currency_from}`).emit('new_offer', offer);
     }
 
-    res.status(201).json(offer);
+    // Форматируем ответ для frontend
+    const responseOffer = {
+      ...populatedOffer,
+      username: populatedOffer.user_id?.username,
+      first_name: populatedOffer.user_id?.first_name,
+      last_name: populatedOffer.user_id?.last_name,
+      rating: populatedOffer.user_id?.rating,
+      deals_count: populatedOffer.user_id?.deals_count,
+      is_verified: populatedOffer.user_id?.is_verified
+    };
+    
+    // Отправляем уведомления пользователям о новом предложении
+    notifyNewOffer(populatedOffer).catch(err => {
+      console.error('Failed to send notifications:', err);
+    });
+    
+    res.status(201).json(responseOffer);
   } catch (error) {
     console.error('Create offer error:', error);
     res.status(500).json({ error: 'Failed to create offer' });
