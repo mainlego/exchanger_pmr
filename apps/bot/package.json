@@ -1,0 +1,23 @@
+{
+  "name": "@exchange/bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/bot.ts",
+    "build": "tsc",
+    "start": "node dist/bot.js"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.64.0",
+    "dotenv": "^16.4.1",
+    "axios": "^1.6.7",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "@types/node-telegram-bot-api": "^0.64.3",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0"
+  }
+}

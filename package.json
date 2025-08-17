@@ -1,0 +1,38 @@
+{
+  "name": "exchange-miniapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Telegram Mini App для обменника валют в Приднестровье",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "web:dev": "npm run dev -w @exchange/web",
+    "api:dev": "npm run dev -w @exchange/api",
+    "bot:dev": "npm run dev -w @exchange/bot",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "install:all": "npm install"
+  },
+  "keywords": [
+    "telegram",
+    "mini-app",
+    "exchange",
+    "pmr"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.3.3",
+    "prettier": "^3.2.5",
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
