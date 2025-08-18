@@ -199,14 +199,17 @@ async function loadUserProfile() {
   try {
     loading.value = true;
     const userId = route.params.id;
+    console.log('Loading profile for user ID:', userId);
     
     // Load user info
     const userResponse = await api.get(`/users/${userId}`);
+    console.log('User data received:', userResponse.data);
     user.value = userResponse.data;
     
     // Load user's active offers
     try {
       const offersResponse = await api.get(`/users/${userId}/offers`);
+      console.log('Offers received:', offersResponse.data);
       offers.value = offersResponse.data.filter(o => o.is_active);
     } catch (error) {
       console.error('Error loading offers:', error);
@@ -215,12 +218,14 @@ async function loadUserProfile() {
     // Load user's reviews
     try {
       const reviewsResponse = await api.get(`/users/${userId}/reviews`);
+      console.log('Reviews received:', reviewsResponse.data);
       reviews.value = reviewsResponse.data;
     } catch (error) {
       console.error('Error loading reviews:', error);
     }
   } catch (error) {
     console.error('Error loading user profile:', error);
+    console.error('Error response:', error.response);
     user.value = null;
   } finally {
     loading.value = false;

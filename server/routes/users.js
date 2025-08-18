@@ -79,12 +79,22 @@ router.get('/search', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('Getting user profile for ID:', id);
+    
+    // Проверяем валидность ID
+    if (!id || id === 'undefined' || id === 'null') {
+      console.log('Invalid user ID:', id);
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
     
     const user = await User.findById(id).lean();
 
     if (!user) {
+      console.log('User not found for ID:', id);
       return res.status(404).json({ error: 'User not found' });
     }
+
+    console.log('User found:', user.username || user.first_name);
 
     // Получить статистику пользователя
     const [totalDeals, completedDeals, reviewsCount] = await Promise.all([

@@ -383,6 +383,9 @@ async function loadDeal() {
   try {
     loading.value = true;
     deal.value = await dealsStore.fetchDeal(dealId.value);
+    console.log('Deal loaded:', deal.value);
+    console.log('Maker ID:', deal.value?.maker_id);
+    console.log('Taker ID:', deal.value?.taker_id);
   } finally {
     loading.value = false;
   }
@@ -468,8 +471,26 @@ async function checkExistingReview() {
 }
 
 function viewProfile(user) {
-  if (!user) return;
-  const userId = user._id || user.id || user;
+  if (!user) {
+    console.log('viewProfile: user is null/undefined');
+    return;
+  }
+  console.log('viewProfile called with user:', user);
+  
+  // Если user уже строка (ID), используем её напрямую
+  let userId;
+  if (typeof user === 'string') {
+    userId = user;
+  } else if (typeof user === 'object') {
+    userId = user._id || user.id;
+  }
+  
+  if (!userId) {
+    console.error('Cannot determine user ID from:', user);
+    return;
+  }
+  
+  console.log('Navigating to user profile with ID:', userId);
   router.push(`/users/${userId}`);
 }
 
