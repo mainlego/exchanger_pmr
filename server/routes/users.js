@@ -143,6 +143,29 @@ router.put('/me', authMiddleware, async (req, res) => {
   }
 });
 
+// Получить предложения пользователя
+router.get('/:id/offers', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { active_only = 'true' } = req.query;
+    
+    const filter = { user_id: id };
+    if (active_only === 'true') {
+      filter.is_active = true;
+    }
+    
+    const Offer = require('../db').Offer;
+    const offers = await Offer.find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    res.json(offers);
+  } catch (error) {
+    console.error('Get user offers error:', error);
+    res.status(500).json({ error: 'Failed to get user offers' });
+  }
+});
+
 // Получить отзывы пользователя
 router.get('/:id/reviews', async (req, res) => {
   try {

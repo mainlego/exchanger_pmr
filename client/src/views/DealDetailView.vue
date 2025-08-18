@@ -1,55 +1,55 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 overflow-x-hidden">
     <!-- Header -->
     <header class="bg-white/80 backdrop-blur-lg shadow-lg sticky top-0 z-20">
-      <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="px-3 py-3">
         <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-3">
-            <button @click="$router.back()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="flex items-center space-x-2">
+            <button @click="$router.back()" class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
               </svg>
             </button>
-            <h1 class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 class="text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Сделка #{{ dealId?.slice(-6) }}
             </h1>
           </div>
           
           <!-- Status Badge -->
-          <div v-if="deal" :class="getStatusClass(deal.status)">
+          <div v-if="deal" :class="getStatusClass(deal.status)" class="text-xs">
             {{ getStatusText(deal.status) }}
           </div>
         </div>
       </div>
     </header>
     
-    <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="px-3 py-3 max-w-full">
       <!-- Loading State -->
       <div v-if="loading" class="flex justify-center py-12">
         <div class="relative">
-          <div class="w-16 h-16 border-4 border-indigo-200 rounded-full"></div>
-          <div class="absolute top-0 left-0 w-16 h-16 border-4 border-indigo-600 rounded-full animate-spin border-t-transparent"></div>
+          <div class="w-12 h-12 border-3 border-indigo-200 rounded-full"></div>
+          <div class="absolute top-0 left-0 w-12 h-12 border-3 border-indigo-600 rounded-full animate-spin border-t-transparent"></div>
         </div>
       </div>
       
       <!-- Deal Details -->
-      <div v-else-if="deal" class="space-y-6">
+      <div v-else-if="deal" class="space-y-4">
         <!-- Status Card -->
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div :class="getStatusHeaderClass(deal.status)" class="px-6 py-4">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+          <div :class="getStatusHeaderClass(deal.status)" class="px-4 py-3">
             <div class="text-white">
-              <div class="text-sm opacity-90 mb-1">Статус сделки</div>
-              <div class="text-2xl font-bold">{{ getStatusText(deal.status) }}</div>
+              <div class="text-xs opacity-90">Статус сделки</div>
+              <div class="text-lg font-bold">{{ getStatusText(deal.status) }}</div>
             </div>
           </div>
           
           <!-- Deal Progress -->
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-6">
+          <div class="p-4">
+            <div class="flex items-center justify-between mb-4">
               <div v-for="step in dealSteps" :key="step.key" class="flex-1 text-center">
                 <div class="relative">
                   <div :class="[
-                    'w-10 h-10 mx-auto rounded-full flex items-center justify-center transition-all',
+                    'w-8 h-8 mx-auto rounded-full flex items-center justify-center transition-all text-xs',
                     isStepCompleted(step.key) 
                       ? 'bg-green-500 text-white' 
                       : isCurrentStep(step.key)
@@ -59,7 +59,7 @@
                     <span v-if="isStepCompleted(step.key)">✓</span>
                     <span v-else>{{ step.number }}</span>
                   </div>
-                  <div class="mt-2 text-xs" :class="isStepCompleted(step.key) ? 'text-green-600 font-semibold' : 'text-gray-500'">
+                  <div class="mt-1 text-[10px]" :class="isStepCompleted(step.key) ? 'text-green-600 font-semibold' : 'text-gray-500'">
                     {{ step.label }}
                   </div>
                 </div>
@@ -67,44 +67,44 @@
             </div>
             
             <!-- Status Actions -->
-            <div v-if="canPerformActions" class="space-y-3">
+            <div v-if="canPerformActions" class="space-y-2">
               <!-- For Maker: Accept/Reject -->
-              <div v-if="isMaker && deal.status === 'pending'" class="flex space-x-3">
+              <div v-if="isMaker && deal.status === 'pending'" class="space-y-2">
                 <button 
                   @click="updateStatus('accepted')"
-                  class="flex-1 px-4 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                  class="w-full px-3 py-2.5 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors"
                 >
                   ✅ Принять сделку
                 </button>
                 <button 
                   @click="updateStatus('cancelled')"
-                  class="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                  class="w-full px-3 py-2.5 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors"
                 >
                   ❌ Отклонить
                 </button>
               </div>
               
               <!-- For Both: Mark as Completed -->
-              <div v-if="deal.status === 'accepted'" class="space-y-3">
-                <div class="p-4 bg-blue-50 rounded-lg">
-                  <p class="text-sm text-blue-900 mb-2">
+              <div v-if="deal.status === 'accepted'" class="space-y-2">
+                <div class="p-3 bg-blue-50 rounded-lg">
+                  <p class="text-xs text-blue-900 mb-2 font-semibold">
                     📱 Контакты для связи:
                   </p>
-                  <div class="space-y-2">
+                  <div class="space-y-2 text-sm">
                     <!-- Show taker contacts to maker -->
                     <div v-if="isMaker" class="space-y-1">
-                      <div class="font-medium text-gray-700">Покупатель:</div>
-                      <div v-if="deal.contact_telegram" class="font-semibold">
+                      <div class="text-xs text-gray-700">Покупатель:</div>
+                      <div v-if="deal.contact_telegram" class="font-medium">
                         Telegram: {{ deal.contact_telegram }}
                       </div>
-                      <div v-if="deal.contact_phone" class="font-semibold">
+                      <div v-if="deal.contact_phone" class="font-medium">
                         Телефон: {{ deal.contact_phone }}
                       </div>
                     </div>
                     <!-- Show maker contacts to taker -->
                     <div v-if="isTaker" class="space-y-1">
-                      <div class="font-medium text-gray-700">Продавец:</div>
-                      <div v-if="deal.maker_id?.username" class="font-semibold">
+                      <div class="text-xs text-gray-700">Продавец:</div>
+                      <div v-if="deal.maker_id?.username" class="font-medium">
                         Telegram: @{{ deal.maker_id.username }}
                       </div>
                     </div>
@@ -113,13 +113,13 @@
                 
                 <button 
                   @click="updateStatus('completed')"
-                  class="w-full px-4 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                  class="w-full px-3 py-2.5 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors"
                 >
                   ✅ Подтвердить успешную сделку
                 </button>
                 <button 
                   @click="updateStatus('disputed')"
-                  class="w-full px-4 py-3 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors"
+                  class="w-full px-3 py-2.5 bg-yellow-500 text-white rounded-lg text-sm font-semibold hover:bg-yellow-600 transition-colors"
                 >
                   ⚠️ Сообщить о проблеме
                 </button>
@@ -129,7 +129,7 @@
               <button 
                 v-if="deal.status === 'pending' && isTaker"
                 @click="updateStatus('cancelled')"
-                class="w-full px-4 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                class="w-full px-3 py-2.5 bg-gray-500 text-white rounded-lg text-sm font-semibold hover:bg-gray-600 transition-colors"
               >
                 Отменить заявку
               </button>
@@ -138,64 +138,64 @@
         </div>
         
         <!-- Deal Info -->
-        <div class="bg-white rounded-2xl shadow-xl p-6">
-          <h3 class="font-semibold text-gray-900 mb-4">Детали сделки</h3>
+        <div class="bg-white rounded-xl shadow-md p-4">
+          <h3 class="font-semibold text-gray-900 mb-3 text-sm">Детали сделки</h3>
           
-          <div class="space-y-4">
+          <div class="space-y-3">
             <!-- Amount -->
-            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <span class="text-gray-600">Сумма сделки</span>
-              <div class="text-right">
-                <div class="font-bold text-lg">{{ formatAmount(deal.amount) }} {{ deal.offer_id?.currency_from }}</div>
-                <div class="text-sm text-gray-500">
-                  → {{ formatAmount(deal.amount * (deal.offer_id?.rate || 0)) }} {{ deal.offer_id?.currency_to }}
-                </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="text-xs text-gray-600 mb-1">Сумма сделки</div>
+              <div class="font-bold text-base">{{ formatAmount(deal.amount) }} {{ deal.offer_id?.currency_from }}</div>
+              <div class="text-xs text-gray-500">
+                → {{ formatAmount(deal.amount * (deal.offer_id?.rate || 0)) }} {{ deal.offer_id?.currency_to }}
               </div>
             </div>
             
             <!-- Participants -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="p-4 bg-blue-50 rounded-lg">
-                <div class="text-sm text-blue-600 mb-2">Продавец</div>
-                <div class="font-semibold">{{ deal.maker_id?.first_name || 'Продавец' }}</div>
-                <div class="text-sm text-gray-600">⭐ {{ deal.maker_id?.rating || 0 }}</div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="p-3 bg-blue-50 rounded-lg" @click="viewProfile(deal.maker_id)">
+                <div class="text-xs text-blue-600 mb-1">Продавец</div>
+                <div class="font-semibold text-sm">{{ deal.maker_id?.first_name || 'Продавец' }}</div>
+                <div class="text-xs text-gray-600">⭐ {{ deal.maker_id?.rating || 0 }}</div>
+                <div class="text-xs text-blue-600 mt-1">Профиль →</div>
               </div>
-              <div class="p-4 bg-green-50 rounded-lg">
-                <div class="text-sm text-green-600 mb-2">Покупатель</div>
-                <div class="font-semibold">{{ deal.taker_id?.first_name || 'Покупатель' }}</div>
-                <div class="text-sm text-gray-600">⭐ {{ deal.taker_id?.rating || 0 }}</div>
+              <div class="p-3 bg-green-50 rounded-lg" @click="viewProfile(deal.taker_id)">
+                <div class="text-xs text-green-600 mb-1">Покупатель</div>
+                <div class="font-semibold text-sm">{{ deal.taker_id?.first_name || 'Покупатель' }}</div>
+                <div class="text-xs text-gray-600">⭐ {{ deal.taker_id?.rating || 0 }}</div>
+                <div class="text-xs text-green-600 mt-1">Профиль →</div>
               </div>
             </div>
             
             <!-- Location -->
-            <div class="p-4 bg-gray-50 rounded-lg">
-              <div class="text-sm text-gray-600 mb-1">Место встречи</div>
-              <div class="font-semibold">{{ deal.offer_id?.district }}</div>
-              <div v-if="deal.offer_id?.location" class="text-sm text-gray-600">
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="text-xs text-gray-600 mb-1">Место встречи</div>
+              <div class="font-semibold text-sm">{{ getDistrictName(deal.offer_id?.district) }}</div>
+              <div v-if="deal.offer_id?.location" class="text-xs text-gray-600">
                 {{ deal.offer_id?.location }}
               </div>
             </div>
             
             <!-- Created Date -->
-            <div class="text-sm text-gray-500 text-center">
+            <div class="text-xs text-gray-500 text-center">
               Создана: {{ formatDate(deal.createdAt || deal.created_at) }}
             </div>
           </div>
         </div>
         
         <!-- Messages -->
-        <div class="bg-white rounded-2xl shadow-xl p-6">
-          <h3 class="font-semibold text-gray-900 mb-4">Сообщения</h3>
+        <div class="bg-white rounded-xl shadow-md p-4">
+          <h3 class="font-semibold text-gray-900 mb-3 text-sm">Сообщения</h3>
           
-          <div v-if="messages.length > 0" class="space-y-3 mb-4 max-h-64 overflow-y-auto">
+          <div v-if="messages.length > 0" class="space-y-2 mb-3 max-h-48 overflow-y-auto">
             <div v-for="msg in messages" :key="msg.id" 
                  :class="[
-                   'p-3 rounded-lg',
+                   'p-2 rounded-lg text-sm',
                    msg.user_id === authStore.user?.id 
                      ? 'bg-indigo-100 ml-auto max-w-[80%]' 
                      : 'bg-gray-100 mr-auto max-w-[80%]'
                  ]">
-              <div class="text-sm font-medium mb-1">
+              <div class="text-xs font-medium mb-1">
                 {{ msg.user_id === authStore.user?.id ? 'Вы' : msg.user_id?.first_name || 'Пользователь' }}
               </div>
               <div class="text-gray-700">{{ msg.message }}</div>
@@ -205,7 +205,7 @@
             </div>
           </div>
           
-          <div v-else class="text-center text-gray-500 py-4">
+          <div v-else class="text-center text-gray-500 py-3 text-sm">
             Нет сообщений
           </div>
           
@@ -215,12 +215,12 @@
               v-model="newMessage"
               type="text"
               placeholder="Написать сообщение..."
-              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
             <button 
               type="submit"
               :disabled="!newMessage.trim()"
-              class="px-6 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors disabled:opacity-50"
+              class="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors disabled:opacity-50"
             >
               Отправить
             </button>
@@ -228,32 +228,35 @@
         </div>
         
         <!-- Leave Review (if completed) -->
-        <div v-if="deal.status === 'completed' && !hasLeftReview" class="bg-white rounded-2xl shadow-xl p-6">
-          <h3 class="font-semibold text-gray-900 mb-4">Оставить отзыв</h3>
+        <div v-if="deal.status === 'completed' && !hasLeftReview" class="bg-white rounded-xl shadow-md p-4">
+          <h3 class="font-semibold text-gray-900 mb-3 text-sm">Оставить отзыв</h3>
           
-          <form @submit.prevent="submitReview" class="space-y-4">
+          <form @submit.prevent="submitReview" class="space-y-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Оценка</label>
-              <div class="flex space-x-2">
+              <label class="block text-xs font-medium text-gray-700 mb-2">Оценка</label>
+              <div class="flex space-x-1">
                 <button 
                   v-for="i in 5" 
                   :key="i"
                   type="button"
                   @click="reviewRating = i"
-                  class="text-3xl transition-colors"
-                  :class="i <= reviewRating ? 'text-yellow-400' : 'text-gray-300'"
+                  class="text-2xl transition-all"
+                  :class="i <= reviewRating ? 'text-yellow-400 transform scale-110' : 'text-gray-200'"
                 >
                   ⭐
                 </button>
               </div>
+              <div class="text-xs text-gray-600 mt-1">
+                {{ reviewRating > 0 ? `Выбрано: ${reviewRating} ${reviewRating === 1 ? 'звезда' : reviewRating < 5 ? 'звезды' : 'звезд'}` : 'Выберите оценку' }}
+              </div>
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Комментарий</label>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Комментарий</label>
               <textarea 
                 v-model="reviewComment"
                 rows="3"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="Поделитесь вашим опытом..."
               ></textarea>
             </div>
@@ -261,7 +264,7 @@
             <button 
               type="submit"
               :disabled="!reviewRating"
-              class="w-full px-4 py-3 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 transition-colors disabled:opacity-50"
+              class="w-full px-3 py-2.5 bg-indigo-500 text-white rounded-lg text-sm font-semibold hover:bg-indigo-600 transition-colors disabled:opacity-50"
             >
               Отправить отзыв
             </button>
@@ -271,9 +274,9 @@
       
       <!-- Error State -->
       <div v-else class="text-center py-12">
-        <div class="text-6xl mb-4">❌</div>
-        <div class="text-xl font-semibold text-gray-700 mb-2">Сделка не найдена</div>
-        <router-link to="/deals" class="text-indigo-600 hover:text-indigo-700">
+        <div class="text-5xl mb-3">❌</div>
+        <div class="text-lg font-semibold text-gray-700 mb-2">Сделка не найдена</div>
+        <router-link to="/deals" class="text-indigo-600 hover:text-indigo-700 text-sm">
           Вернуться к сделкам
         </router-link>
       </div>
@@ -286,13 +289,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useDealsStore } from '@/stores/deals';
 import { useAuthStore } from '@/stores/auth';
 import api from '@/services/api';
 import BottomNav from '@/components/BottomNav.vue';
 
 const route = useRoute();
+const router = useRouter();
 const dealsStore = useDealsStore();
 const authStore = useAuthStore();
 
@@ -307,12 +311,18 @@ const hasLeftReview = ref(false);
 
 const isMaker = computed(() => {
   return deal.value && authStore.user && 
-    (deal.value.maker_id?._id === authStore.user._id || deal.value.maker_id === authStore.user._id);
+    (deal.value.maker_id?._id === authStore.user._id || 
+     deal.value.maker_id?._id === authStore.user.id ||
+     deal.value.maker_id === authStore.user._id ||
+     deal.value.maker_id === authStore.user.id);
 });
 
 const isTaker = computed(() => {
   return deal.value && authStore.user && 
-    (deal.value.taker_id?._id === authStore.user._id || deal.value.taker_id === authStore.user._id);
+    (deal.value.taker_id?._id === authStore.user._id || 
+     deal.value.taker_id?._id === authStore.user.id ||
+     deal.value.taker_id === authStore.user._id ||
+     deal.value.taker_id === authStore.user.id);
 });
 
 const canPerformActions = computed(() => {
@@ -357,6 +367,13 @@ async function updateStatus(status) {
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.showAlert(getStatusUpdateMessage(status));
     }
+    
+    // If completed or cancelled, redirect to deals list after a delay
+    if (status === 'completed' || status === 'cancelled') {
+      setTimeout(() => {
+        router.push('/deals');
+      }, 2000);
+    }
   } catch (error) {
     console.error('Update status error:', error);
   }
@@ -394,13 +411,19 @@ async function submitReview() {
   }
 }
 
+function viewProfile(user) {
+  if (!user) return;
+  const userId = user._id || user.id || user;
+  router.push(`/profile/${userId}`);
+}
+
 function getStatusClass(status) {
   const classes = {
-    pending: 'px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-semibold',
-    accepted: 'px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold',
-    completed: 'px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold',
-    cancelled: 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold',
-    disputed: 'px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold'
+    pending: 'px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-semibold',
+    accepted: 'px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold',
+    completed: 'px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold',
+    cancelled: 'px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-semibold',
+    disputed: 'px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full font-semibold'
   };
   return classes[status] || '';
 }
@@ -446,6 +469,19 @@ function isStepCompleted(step) {
 
 function isCurrentStep(step) {
   return deal.value?.status === step;
+}
+
+function getDistrictName(district) {
+  const districts = {
+    tiraspol: 'Тирасполь',
+    bendery: 'Бендеры',
+    slobodzeya: 'Слободзея',
+    grigoriopol: 'Григориополь',
+    dubossary: 'Дубоссары',
+    rybnitsa: 'Рыбница',
+    kamenka: 'Каменка'
+  };
+  return districts[district] || district;
 }
 
 function formatAmount(amount) {
