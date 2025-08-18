@@ -17,8 +17,9 @@ const httpServer = createServer(app);
 
 const PORT = process.env.PORT || 5000;
 
-// Trust proxy for Render.com and other proxies
-app.set('trust proxy', true);
+// Trust proxy configuration for Render.com
+// Render uses a single proxy, so we set it to 1
+app.set('trust proxy', 1);
 
 // CORS configuration
 const allowedOrigins = [
@@ -52,12 +53,17 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Rate limiting
+// Rate limiting - temporarily disabled due to Render proxy issues
+// TODO: Re-enable when proxy configuration is properly set up
+/*
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 app.use('/api', limiter);
+*/
 
 // Routes
 app.use('/api/auth', authRoutes);
