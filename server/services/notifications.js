@@ -52,8 +52,10 @@ ${offerType}
     const keyboard = {
       inline_keyboard: [[
         {
-          text: '📱 Открыть приложение',
-          url: `${process.env.WEB_APP_URL || 'https://p2p-exchange-pmr.onrender.com'}/offers/${offer._id}`
+          text: '📱 Открыть предложение',
+          web_app: {
+            url: `${process.env.WEB_APP_URL || 'https://p2p-exchange-pmr.onrender.com'}/#/offers/${offer._id}`
+          }
         }
       ]]
     };
@@ -97,7 +99,9 @@ async function notifyNewDeal(deal, takerName) {
       inline_keyboard: [[
         {
           text: '📱 Открыть сделку',
-          url: `${process.env.WEB_APP_URL || 'https://p2p-exchange-pmr.onrender.com'}/deals/${deal._id}`
+          web_app: {
+            url: `${process.env.WEB_APP_URL || 'https://p2p-exchange-pmr.onrender.com'}/#/deals/${deal._id}`
+          }
         }
       ]]
     };
@@ -130,7 +134,9 @@ async function notifyDealStatusChange(dealId, status, userId) {
       inline_keyboard: [[
         {
           text: '📱 Открыть сделку',
-          url: `${process.env.WEB_APP_URL || 'https://p2p-exchange-pmr.onrender.com'}/deals/${dealId}`
+          web_app: {
+            url: `${process.env.WEB_APP_URL || 'https://p2p-exchange-pmr.onrender.com'}/#/deals/${dealId}`
+          }
         }
       ]]
     };
@@ -165,7 +171,9 @@ ${review.comment ? `<b>Комментарий:</b> ${review.comment}` : ''}
       inline_keyboard: [[
         {
           text: '📱 Открыть профиль',
-          url: `${process.env.WEB_APP_URL || 'https://p2p-exchange-pmr.onrender.com'}/profile`
+          web_app: {
+            url: `${process.env.WEB_APP_URL || 'https://p2p-exchange-pmr.onrender.com'}/#/profile`
+          }
         }
       ]]
     };

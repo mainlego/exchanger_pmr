@@ -5,7 +5,7 @@ const http = require('http');
 
 const bot = new Telegraf(process.env.BOT_TOKEN || '8200049903:AAETV6_6XOLA6SP-jaW2Hizsm5hVjv_p5CY');
 const API_URL = process.env.API_URL || 'http://localhost:5000/api';
-const WEB_APP_URL = process.env.WEB_APP_URL || 'https://your-app.render.com';
+const WEB_APP_URL = process.env.WEB_APP_URL || 'https://p2p-exchange-pmr.onrender.com';
 
 // Start command
 bot.start((ctx) => {
@@ -75,7 +75,7 @@ bot.hears('⭐ Мой рейтинг', async (ctx) => {
 Для подробной информации откройте веб-приложение:
     `, 
       Markup.inlineKeyboard([
-        [Markup.button.webApp('Открыть профиль', WEB_APP_URL + '/profile')]
+        [Markup.button.webApp('Открыть профиль', WEB_APP_URL + '/#/profile')]
       ])
     );
   } catch (error) {
@@ -122,7 +122,7 @@ async function sendNewDealNotification(telegramId, deal) {
       `Пользователь: ${deal.taker_name}\n\n` +
       `Откройте приложение для деталей:`,
       Markup.inlineKeyboard([
-        [Markup.button.webApp('Открыть сделку', `${WEB_APP_URL}/deals/${deal.id}`)]
+        [Markup.button.webApp('Открыть сделку', `${WEB_APP_URL}/#/deals/${deal.id}`)]
       ])
     );
   } catch (error) {
@@ -143,7 +143,7 @@ async function sendDealStatusNotification(telegramId, dealId, status) {
       `🔔 Статус вашей сделки изменен на: ${statusText[status] || status}\n\n` +
       `Откройте для деталей:`,
       Markup.inlineKeyboard([
-        [Markup.button.webApp('Открыть сделку', `${WEB_APP_URL}/deals/${dealId}`)]
+        [Markup.button.webApp('Открыть сделку', `${WEB_APP_URL}/#/deals/${dealId}`)]
       ])
     );
   } catch (error) {
@@ -160,7 +160,7 @@ async function sendNewReviewNotification(telegramId, review) {
       `Комментарий: ${review.comment || 'Без комментария'}\n\n` +
       `Ваш общий рейтинг обновлен.`,
       Markup.inlineKeyboard([
-        [Markup.button.webApp('Открыть профиль', `${WEB_APP_URL}/profile`)]
+        [Markup.button.webApp('Открыть профиль', `${WEB_APP_URL}/#/profile`)]
       ])
     );
   } catch (error) {
