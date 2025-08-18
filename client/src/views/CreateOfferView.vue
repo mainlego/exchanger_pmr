@@ -63,14 +63,15 @@
               <label class="block text-sm font-medium mb-1">Получаю</label>
               <select v-model="form.currency_to" class="input" required>
                 <option value="">Выберите</option>
-                <option value="RUP">RUP</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="MDL">MDL</option>
-                <option value="UAH">UAH</option>
-                <option value="RUB">RUB</option>
+                <option v-for="currency in availableCurrenciesTo" :key="currency" :value="currency">
+                  {{ currency }}
+                </option>
               </select>
             </div>
+          </div>
+          <div v-if="form.currency_from && form.currency_to && form.currency_from === form.currency_to" 
+               class="mt-2 p-2 bg-red-50 rounded-lg text-red-600 text-sm">
+            ⚠️ Нельзя обменивать одинаковые валюты
           </div>
         </div>
 
@@ -189,7 +190,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useOffersStore } from '@/stores/offers';
 
@@ -197,6 +198,13 @@ const router = useRouter();
 const offersStore = useOffersStore();
 
 const loading = ref(false);
+
+const currencies = ['RUP', 'USD', 'EUR', 'MDL', 'UAH', 'RUB'];
+
+const availableCurrenciesTo = computed(() => {
+  if (!form.value.currency_from) return currencies;
+  return currencies.filter(c => c !== form.value.currency_from);
+});
 const form = ref({
   type: 'sell',
   currency_from: '',
@@ -215,6 +223,14 @@ function formatAmount(amount) {
 }
 
 async function handleSubmit() {
+  // Проверяем, что валюты разные
+  if (form.value.currency_from === form.value.currency_to) {
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.showAlert('Нельзя обменивать одинаковые валюты');
+    }
+    return;
+  }
+  
   loading.value = true;
   
   try {

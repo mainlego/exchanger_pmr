@@ -72,6 +72,30 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Проверить существующий отзыв по сделке от текущего пользователя
+router.get('/check/:dealId', authMiddleware, async (req, res) => {
+  try {
+    const { dealId } = req.params;
+    const userId = req.user.id;
+
+    const review = await Review.findOne({
+      deal_id: dealId,
+      from_user_id: userId
+    })
+    .populate('from_user_id', 'username first_name last_name photo_url')
+    .lean();
+
+    if (review) {
+      res.json({ exists: true, review });
+    } else {
+      res.json({ exists: false });
+    }
+  } catch (error) {
+    console.error('Check review error:', error);
+    res.status(500).json({ error: 'Failed to check review' });
+  }
+});
+
 // Получить отзывы по сделке
 router.get('/deal/:dealId', async (req, res) => {
   try {

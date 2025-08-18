@@ -227,48 +227,85 @@
           </form>
         </div>
         
-        <!-- Leave Review (if completed) -->
-        <div v-if="deal.status === 'completed' && !hasLeftReview" class="bg-white rounded-xl shadow-md p-4">
-          <h3 class="font-semibold text-gray-900 mb-3 text-sm">Оставить отзыв</h3>
+        <!-- Leave Review or Show Submitted Review -->
+        <div v-if="deal.status === 'completed'" class="bg-white rounded-xl shadow-md p-4">
+          <!-- Show submitted review -->
+          <div v-if="hasLeftReview && submittedReview">
+            <h3 class="font-semibold text-gray-900 mb-3 text-sm">Ваш отзыв</h3>
+            <div class="p-3 bg-green-50 rounded-lg">
+              <div class="flex items-center mb-2">
+                <template v-for="i in 5" :key="i">
+                  <svg :class="i <= submittedReview.rating ? 'text-yellow-400' : 'text-gray-300'" 
+                       class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                  </svg>
+                </template>
+                <span class="ml-2 text-sm font-medium">{{ submittedReview.rating }} из 5</span>
+              </div>
+              <div v-if="submittedReview.comment" class="text-sm text-gray-700">
+                {{ submittedReview.comment }}
+              </div>
+              <div class="text-xs text-gray-500 mt-2">
+                Отзыв отправлен ✓
+              </div>
+            </div>
+          </div>
           
-          <form @submit.prevent="submitReview" class="space-y-3">
-            <div>
-              <label class="block text-xs font-medium text-gray-700 mb-2">Оценка</label>
-              <div class="flex space-x-1">
-                <button 
-                  v-for="i in 5" 
-                  :key="i"
-                  type="button"
-                  @click="reviewRating = i"
-                  class="text-2xl transition-all"
-                  :class="i <= reviewRating ? 'text-yellow-400 transform scale-110' : 'text-gray-200'"
-                >
-                  ⭐
-                </button>
-              </div>
-              <div class="text-xs text-gray-600 mt-1">
-                {{ reviewRating > 0 ? `Выбрано: ${reviewRating} ${reviewRating === 1 ? 'звезда' : reviewRating < 5 ? 'звезды' : 'звезд'}` : 'Выберите оценку' }}
-              </div>
-            </div>
+          <!-- Show review form -->
+          <div v-else>
+            <h3 class="font-semibold text-gray-900 mb-3 text-sm">Оставить отзыв</h3>
             
-            <div>
-              <label class="block text-xs font-medium text-gray-700 mb-1">Комментарий</label>
-              <textarea 
-                v-model="reviewComment"
-                rows="3"
-                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder="Поделитесь вашим опытом..."
-              ></textarea>
-            </div>
-            
-            <button 
-              type="submit"
-              :disabled="!reviewRating"
-              class="w-full px-3 py-2.5 bg-indigo-500 text-white rounded-lg text-sm font-semibold hover:bg-indigo-600 transition-colors disabled:opacity-50"
-            >
-              Отправить отзыв
-            </button>
-          </form>
+            <form @submit.prevent="submitReview" class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-2">Оценка</label>
+                <div class="flex space-x-1">
+                  <button 
+                    v-for="i in 5" 
+                    :key="i"
+                    type="button"
+                    @click="reviewRating = i"
+                    class="text-2xl transition-all focus:outline-none"
+                  >
+                    <svg 
+                      :class="[
+                        'w-7 h-7 transition-all',
+                        i <= reviewRating 
+                          ? 'text-yellow-400 fill-current transform scale-110' 
+                          : 'text-gray-300 stroke-current fill-none'
+                      ]"
+                      :fill="i <= reviewRating ? 'currentColor' : 'none'"
+                      :stroke="i <= reviewRating ? 'none' : 'currentColor'"
+                      stroke-width="1.5"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div class="text-xs text-gray-600 mt-1">
+                  {{ reviewRating > 0 ? `Выбрано: ${reviewRating} ${reviewRating === 1 ? 'звезда' : reviewRating < 5 ? 'звезды' : 'звезд'}` : 'Выберите оценку' }}
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Комментарий</label>
+                <textarea 
+                  v-model="reviewComment"
+                  rows="3"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Поделитесь вашим опытом..."
+                ></textarea>
+              </div>
+              
+              <button 
+                type="submit"
+                :disabled="!reviewRating"
+                class="w-full px-3 py-2.5 bg-indigo-500 text-white rounded-lg text-sm font-semibold hover:bg-indigo-600 transition-colors disabled:opacity-50"
+              >
+                Отправить отзыв
+              </button>
+            </form>
+          </div>
         </div>
       </div>
       
@@ -308,6 +345,7 @@ const newMessage = ref('');
 const reviewRating = ref(0);
 const reviewComment = ref('');
 const hasLeftReview = ref(false);
+const submittedReview = ref(null);
 
 const isMaker = computed(() => {
   return deal.value && authStore.user && 
@@ -338,8 +376,7 @@ const dealSteps = [
 onMounted(async () => {
   await loadDeal();
   await loadMessages();
-  // Check if review exists
-  // TODO: Implement review check
+  await checkExistingReview();
 });
 
 async function loadDeal() {
@@ -402,6 +439,10 @@ async function submitReview() {
     });
     
     hasLeftReview.value = true;
+    submittedReview.value = {
+      rating: reviewRating.value,
+      comment: reviewComment.value
+    };
     
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.showAlert('Отзыв успешно отправлен!');
@@ -411,10 +452,25 @@ async function submitReview() {
   }
 }
 
+async function checkExistingReview() {
+  if (!deal.value || deal.value.status !== 'completed') return;
+  
+  try {
+    // Check if current user has already left a review for this deal
+    const response = await api.get(`/reviews/check/${dealId.value}`);
+    if (response.data.exists) {
+      hasLeftReview.value = true;
+      submittedReview.value = response.data.review;
+    }
+  } catch (error) {
+    console.error('Check review error:', error);
+  }
+}
+
 function viewProfile(user) {
   if (!user) return;
   const userId = user._id || user.id || user;
-  router.push(`/profile/${userId}`);
+  router.push(`/users/${userId}`);
 }
 
 function getStatusClass(status) {
