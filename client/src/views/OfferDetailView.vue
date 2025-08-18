@@ -181,63 +181,61 @@
         <div class="bg-white rounded-2xl shadow-xl p-6">
           <h2 class="text-lg font-bold text-gray-900 mb-4">Информация о продавце</h2>
           
-          <div class="flex items-start justify-between">
-            <div class="flex items-center space-x-4">
-              <!-- Avatar -->
-              <div class="relative">
-                <div class="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                  {{ (offer.first_name || offer.username || 'U')[0].toUpperCase() }}
-                </div>
-                <div v-if="offer.is_verified" class="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                  <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                  </svg>
-                </div>
+          <div class="flex items-center space-x-4">
+            <!-- Avatar -->
+            <div class="relative">
+              <div class="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                {{ (offer.first_name || offer.username || 'U')[0].toUpperCase() }}
               </div>
-              
-              <!-- User Info -->
-              <div>
-                <div class="font-semibold text-lg text-gray-900">
-                  {{ offer.first_name || offer.username || 'Пользователь' }}
-                  <span v-if="offer.last_name" class="ml-1">{{ offer.last_name }}</span>
-                </div>
-                <div class="flex items-center space-x-3 mt-1">
-                  <!-- Rating -->
-                  <div class="flex items-center">
-                    <template v-for="i in 5" :key="i">
-                      <svg :class="i <= Math.round(offer.rating || 0) ? 'text-yellow-400' : 'text-gray-300'" 
-                           class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                      </svg>
-                    </template>
-                    <span class="ml-1 text-sm text-gray-600">({{ offer.rating || 0 }})</span>
-                  </div>
-                  <!-- Deals Count -->
-                  <span class="text-sm text-gray-600">
-                    🤝 {{ offer.deals_count || 0 }} сделок
-                  </span>
-                </div>
-                <!-- Online Status -->
-                <div class="flex items-center mt-2">
-                  <span v-if="offer.is_online" class="flex items-center text-sm text-green-600">
-                    <span class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
-                    Онлайн
-                  </span>
-                  <span v-else class="text-sm text-gray-500">
-                    Был в сети {{ formatLastSeen(offer.last_seen) }}
-                  </span>
-                </div>
+              <div v-if="offer.is_verified" class="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
               </div>
             </div>
             
-            <!-- Contact Button -->
-            <div v-if="!isOwner">
-              <button 
-                @click="createDeal"
-                class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all"
-              >
-                💬 Начать сделку
-              </button>
+            <!-- User Info -->
+            <div class="flex-1">
+              <div class="font-semibold text-lg text-gray-900">
+                {{ offer.first_name || offer.username || 'Пользователь' }}
+                <span v-if="offer.last_name" class="ml-1">{{ offer.last_name }}</span>
+              </div>
+              <div class="flex items-center space-x-3 mt-1">
+                <!-- Rating -->
+                <div class="flex items-center">
+                  <template v-for="i in 5" :key="i">
+                    <svg :class="i <= Math.round(offer.rating || 0) ? 'text-yellow-400' : 'text-gray-300'" 
+                         class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                    </svg>
+                  </template>
+                  <span class="ml-1 text-sm text-gray-600">({{ offer.rating || 0 }})</span>
+                </div>
+                <!-- Deals Count -->
+                <span class="text-sm text-gray-600">
+                  🤝 {{ offer.deals_count || 0 }} сделок
+                </span>
+              </div>
+              <!-- Online Status -->
+              <div class="flex items-center mt-2">
+                <span v-if="offer.is_online" class="flex items-center text-sm text-green-600">
+                  <span class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
+                  Онлайн
+                </span>
+                <span v-else class="text-sm text-gray-500">
+                  Был в сети {{ formatLastSeen(offer.last_seen) }}
+                </span>
+              </div>
+              
+              <!-- Contact Button -->
+              <div v-if="!isOwner" class="mt-4">
+                <button 
+                  @click="createDeal"
+                  class="w-full px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all"
+                >
+                  💬 Начать сделку
+                </button>
+              </div>
             </div>
           </div>
         </div>
