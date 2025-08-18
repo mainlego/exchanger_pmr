@@ -17,6 +17,9 @@ const httpServer = createServer(app);
 
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy for Render.com and other proxies
+app.set('trust proxy', true);
+
 // CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',

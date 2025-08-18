@@ -88,14 +88,25 @@
               <div v-if="deal.status === 'accepted'" class="space-y-3">
                 <div class="p-4 bg-blue-50 rounded-lg">
                   <p class="text-sm text-blue-900 mb-2">
-                    📱 Контакты {{ isMaker ? 'покупателя' : 'продавца' }}:
+                    📱 Контакты для связи:
                   </p>
-                  <div class="space-y-1 font-semibold">
-                    <div v-if="deal.contact_telegram">
-                      Telegram: {{ deal.contact_telegram }}
+                  <div class="space-y-2">
+                    <!-- Show taker contacts to maker -->
+                    <div v-if="isMaker" class="space-y-1">
+                      <div class="font-medium text-gray-700">Покупатель:</div>
+                      <div v-if="deal.contact_telegram" class="font-semibold">
+                        Telegram: {{ deal.contact_telegram }}
+                      </div>
+                      <div v-if="deal.contact_phone" class="font-semibold">
+                        Телефон: {{ deal.contact_phone }}
+                      </div>
                     </div>
-                    <div v-if="deal.contact_phone">
-                      Телефон: {{ deal.contact_phone }}
+                    <!-- Show maker contacts to taker -->
+                    <div v-if="isTaker" class="space-y-1">
+                      <div class="font-medium text-gray-700">Продавец:</div>
+                      <div v-if="deal.maker_id?.username" class="font-semibold">
+                        Telegram: @{{ deal.maker_id.username }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -267,9 +278,6 @@
         </router-link>
       </div>
     </div>
-    
-    <!-- Bottom padding -->
-    <div class="h-20"></div>
     
     <!-- Bottom Navigation -->
     <BottomNav />

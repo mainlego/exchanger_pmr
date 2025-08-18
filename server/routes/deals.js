@@ -6,7 +6,7 @@ const { notifyNewDeal, notifyDealStatusChange } = require('../services/notificat
 // Создать новую сделку
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { offer_id, amount, message } = req.body;
+    const { offer_id, amount, message, contact_telegram, contact_phone } = req.body;
     const taker_id = req.user.id;
 
     // Проверяем предложение
@@ -36,6 +36,8 @@ router.post('/', authMiddleware, async (req, res) => {
       taker_id,
       amount,
       message,
+      contact_telegram,
+      contact_phone,
       status: 'pending'
     });
 

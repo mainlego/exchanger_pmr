@@ -60,6 +60,8 @@ const dealSchema = new mongoose.Schema({
     default: 'pending' 
   },
   message: String,
+  contact_telegram: String,
+  contact_phone: String,
   completed_at: Date
 }, { timestamps: true });
 
