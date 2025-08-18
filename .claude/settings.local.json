@@ -14,7 +14,9 @@
       "Bash(touch:*)",
       "Bash(npm ls:*)",
       "Bash(npm uninstall:*)",
-      "Bash(npm run clear-webhook:*)"
+      "Bash(npm run clear-webhook:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd.exe //c \"taskkill /PID 34708 /F\")"
     ],
     "deny": [],
     "ask": []
