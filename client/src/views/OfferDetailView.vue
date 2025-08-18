@@ -262,6 +262,9 @@
       </div>
     </div>
     
+    <!-- Bottom padding for navigation -->
+    <div class="h-20"></div>
+    
     <!-- Bottom Navigation -->
     <BottomNav />
   </div>

@@ -30,6 +30,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/deals/create',
+    name: 'CreateDeal',
+    component: () => import('@/views/CreateDealView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/deals/:id',
     name: 'DealDetail',
     component: () => import('@/views/DealDetailView.vue'),
