@@ -41,11 +41,20 @@ router.post('/', authMiddleware, async (req, res) => {
       status: 'pending'
     });
 
+    console.log('Created deal:', {
+      id: deal._id,
+      maker_id: offer.user_id._id,
+      taker_id,
+      amount,
+      status: 'pending'
+    });
+
     // Получаем информацию о taker
     const taker = await User.findById(taker_id)
       .select('username first_name last_name telegram_id');
 
     // Отправляем уведомление maker через Telegram
+    console.log('Sending notification to maker:', offer.user_id._id);
     await notifyNewDeal(deal, taker.first_name || taker.username || 'Пользователь');
 
     // Отправляем уведомление через WebSocket
@@ -58,7 +67,17 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
-    res.status(201).json(deal);
+    // Возвращаем полную информацию о сделке
+    const populatedDeal = await Deal.findById(deal._id)
+      .populate({
+        path: 'offer_id',
+        select: 'type currency_from currency_to rate location district'
+      })
+      .populate('maker_id', 'username first_name last_name telegram_id rating')
+      .populate('taker_id', 'username first_name last_name telegram_id rating')
+      .lean();
+
+    res.status(201).json(populatedDeal);
   } catch (error) {
     console.error('Create deal error:', error);
     res.status(500).json({ error: 'Failed to create deal' });
@@ -70,6 +89,8 @@ router.get('/my', authMiddleware, async (req, res) => {
   try {
     const { status, role } = req.query;
     const userId = req.user.id;
+
+    console.log('Fetching deals for user:', userId, 'with filters:', { status, role });
 
     // Построение фильтра
     const filter = {};
@@ -88,15 +109,19 @@ router.get('/my', authMiddleware, async (req, res) => {
       filter.status = status;
     }
 
+    console.log('Deal filter:', JSON.stringify(filter));
+
     const deals = await Deal.find(filter)
       .populate({
         path: 'offer_id',
         select: 'type currency_from currency_to rate location district'
       })
-      .populate('maker_id', 'username first_name telegram_id rating')
-      .populate('taker_id', 'username first_name telegram_id rating')
+      .populate('maker_id', 'username first_name last_name telegram_id rating photo_url')
+      .populate('taker_id', 'username first_name last_name telegram_id rating photo_url')
       .sort({ createdAt: -1 })
       .lean();
+
+    console.log(`Found ${deals.length} deals for user ${userId}`);
 
     res.json(deals);
   } catch (error) {
