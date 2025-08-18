@@ -91,10 +91,29 @@ export const useDealsStore = defineStore('deals', () => {
     }
   }
   
+  async function fetchMyDeals(status = null, role = null) {
+    loading.value = true;
+    try {
+      const params = {};
+      if (status) params.status = status;
+      if (role) params.role = role;
+      
+      const response = await api.get('/deals/my', { params });
+      deals.value = response.data.map(normalizeDeal);
+      return deals.value;
+    } catch (error) {
+      console.error('Fetch my deals error:', error);
+      return [];
+    } finally {
+      loading.value = false;
+    }
+  }
+  
   return {
     deals,
     loading,
     fetchDeals,
+    fetchMyDeals,
     fetchDeal,
     createDeal,
     updateDealStatus,
