@@ -340,13 +340,16 @@ function formatTime(date) {
 }
 
 function viewUserProfile(offer) {
-  // user_id может быть либо строкой (ID) либо объектом
+  // user_id должен быть строкой с ID из сервера
   const userId = typeof offer.user_id === 'string' 
     ? offer.user_id 
     : offer.user_id?._id || offer.user_id?.id;
     
   if (userId) {
+    console.log('OffersView navigating to profile:', userId);
     router.push(`/users/${userId}`);
+  } else {
+    console.error('No user_id found in offer:', offer);
   }
 }
 

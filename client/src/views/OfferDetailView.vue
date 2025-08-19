@@ -395,8 +395,14 @@ async function deleteOffer() {
 }
 
 function viewUserProfile() {
+  // user_id уже должен быть строкой с ID из сервера
   if (offer.value && offer.value.user_id) {
-    router.push(`/users/${offer.value.user_id}`);
+    const userId = typeof offer.value.user_id === 'string' 
+      ? offer.value.user_id 
+      : offer.value.user_id._id || offer.value.user_id.id;
+    
+    console.log('Navigating to profile:', userId);
+    router.push(`/users/${userId}`);
   }
 }
 

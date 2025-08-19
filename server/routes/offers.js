@@ -41,9 +41,10 @@ router.get('/', async (req, res) => {
       .limit(50)
       .lean();
 
-    // Форматируем ответ
+    // Форматируем ответ - сохраняем user_id как строку для навигации
     const formattedOffers = offers.map(offer => ({
       ...offer,
+      user_id: offer.user_id?._id || offer.user_id, // Сохраняем ID для навигации
       username: offer.user_id?.username,
       first_name: offer.user_id?.first_name,
       last_name: offer.user_id?.last_name,
@@ -115,9 +116,10 @@ router.post('/', authMiddleware, async (req, res) => {
       io.to(`currency:${currency_from}`).emit('new_offer', offer);
     }
 
-    // Форматируем ответ для frontend
+    // Форматируем ответ для frontend - сохраняем user_id как строку для навигации
     const responseOffer = {
       ...populatedOffer,
+      user_id: populatedOffer.user_id?._id || populatedOffer.user_id, // Сохраняем ID для навигации
       username: populatedOffer.user_id?.username,
       first_name: populatedOffer.user_id?.first_name,
       last_name: populatedOffer.user_id?.last_name,
@@ -155,9 +157,10 @@ router.get('/:id', async (req, res) => {
     // Увеличить счетчик просмотров
     await Offer.findByIdAndUpdate(id, { $inc: { views_count: 1 } });
 
-    // Форматируем ответ
+    // Форматируем ответ - сохраняем user_id как строку для навигации
     const formattedOffer = {
       ...offer,
+      user_id: offer.user_id?._id || offer.user_id, // Сохраняем ID для навигации
       username: offer.user_id?.username,
       first_name: offer.user_id?.first_name,
       last_name: offer.user_id?.last_name,
@@ -260,9 +263,10 @@ router.get('/my', authMiddleware, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Форматируем ответ
+    // Форматируем ответ - сохраняем user_id как строку для навигации
     const formattedOffers = offers.map(offer => ({
       ...offer,
+      user_id: offer.user_id?._id || offer.user_id, // Сохраняем ID для навигации
       username: offer.user_id?.username,
       first_name: offer.user_id?.first_name,
       last_name: offer.user_id?.last_name,
@@ -297,9 +301,10 @@ router.get('/user/:userId', async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Форматируем ответ
+    // Форматируем ответ - сохраняем user_id как строку для навигации
     const formattedOffers = offers.map(offer => ({
       ...offer,
+      user_id: offer.user_id?._id || offer.user_id, // Сохраняем ID для навигации
       username: offer.user_id?.username,
       first_name: offer.user_id?.first_name,
       last_name: offer.user_id?.last_name,

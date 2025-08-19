@@ -267,7 +267,16 @@ async function loadUser() {
   try {
     loading.value = true;
     const userId = route.params.id;
+    console.log('UserProfileView: Loading user with ID:', userId);
+    
+    if (!userId || userId === 'undefined') {
+      console.error('Invalid user ID:', userId);
+      user.value = null;
+      return;
+    }
+    
     user.value = await usersStore.fetchUser(userId);
+    console.log('UserProfileView: User loaded:', user.value);
   } catch (error) {
     console.error('Load user error:', error);
     user.value = null;

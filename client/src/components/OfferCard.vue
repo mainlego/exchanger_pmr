@@ -138,13 +138,16 @@ const typeBadgeGradient = computed(() => {
 });
 
 function viewUserProfile() {
-  // user_id может быть либо строкой (ID) либо объектом
+  // user_id должен быть строкой с ID из сервера
   const userId = typeof props.offer.user_id === 'string' 
     ? props.offer.user_id 
     : props.offer.user_id?._id || props.offer.user_id?.id;
     
   if (userId) {
+    console.log('OfferCard navigating to profile:', userId);
     router.push(`/users/${userId}`);
+  } else {
+    console.error('No user_id found in offer:', props.offer);
   }
 }
 
