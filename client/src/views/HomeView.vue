@@ -147,7 +147,6 @@
             v-for="offer in recentOffers" 
             :key="offer.id" 
             :offer="offer"
-            :disable-profile-navigation="true"
             class="transform hover:scale-[1.02] transition-all duration-300"
           />
         </transition-group>
