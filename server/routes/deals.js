@@ -175,14 +175,71 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Deal not found' });
     }
 
-    // Определяем разрешенные переходы статусов
+    const isMaker = deal.maker_id.toString() === userId;
+    const isTaker = deal.taker_id.toString() === userId;
+
+    if (!isMaker && !isTaker) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Обработка завершения сделки - требуется подтверждение от обеих сторон
+    if (status === 'completed' && deal.status === 'accepted') {
+      // Устанавливаем флаг подтверждения для текущего пользователя
+      if (isMaker) {
+        deal.maker_confirmed = true;
+      } else if (isTaker) {
+        deal.taker_confirmed = true;
+      }
+
+      // Если обе стороны подтвердили - завершаем сделку
+      if (deal.maker_confirmed && deal.taker_confirmed) {
+        deal.status = 'completed';
+        deal.completed_at = new Date();
+        
+        // Обновляем счетчики пользователей
+        await User.updateMany(
+          { _id: { $in: [deal.maker_id, deal.taker_id] } },
+          { $inc: { deals_count: 1 } }
+        );
+      }
+      
+      await deal.save();
+
+      // Отправляем уведомления
+      const otherUserId = isMaker ? deal.taker_id : deal.maker_id;
+      const io = req.app.locals.io;
+      
+      if (deal.status === 'completed') {
+        await notifyDealStatusChange(id, 'completed', otherUserId);
+        if (io) {
+          io.to(`user:${otherUserId}`).emit('deal_status_changed', {
+            deal_id: id,
+            status: 'completed',
+            changed_by: userId
+          });
+        }
+      } else {
+        // Уведомляем о подтверждении от одной стороны
+        if (io) {
+          io.to(`user:${otherUserId}`).emit('deal_confirmation', {
+            deal_id: id,
+            confirmed_by: userId,
+            maker_confirmed: deal.maker_confirmed,
+            taker_confirmed: deal.taker_confirmed
+          });
+        }
+      }
+      
+      return res.json(deal);
+    }
+
+    // Остальные переходы статусов
     const allowedTransitions = {
       pending: {
         accepted: [deal.maker_id.toString()], // Только maker может принять
         cancelled: [deal.maker_id.toString(), deal.taker_id.toString()] // Оба могут отменить
       },
       accepted: {
-        completed: [deal.maker_id.toString(), deal.taker_id.toString()], // Оба могут завершить
         disputed: [deal.maker_id.toString(), deal.taker_id.toString()], // Оба могут оспорить
         cancelled: [deal.maker_id.toString(), deal.taker_id.toString()] // Оба могут отменить
       }
@@ -199,20 +256,9 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
 
     // Обновляем статус
     deal.status = status;
-    if (status === 'completed') {
-      deal.completed_at = new Date();
-    }
     await deal.save();
 
-    // Если сделка завершена, обновляем счетчики пользователей
-    if (status === 'completed') {
-      await User.updateMany(
-        { _id: { $in: [deal.maker_id, deal.taker_id] } },
-        { $inc: { deals_count: 1 } }
-      );
-    }
-
-    // Отправляем уведомление другому участнику через Telegram
+    // Отправляем уведомление другому участнику
     const otherUserId = userId === deal.maker_id.toString() ? deal.taker_id : deal.maker_id;
     await notifyDealStatusChange(id, status, otherUserId);
 

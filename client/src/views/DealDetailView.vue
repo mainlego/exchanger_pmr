@@ -95,28 +95,79 @@
                     <div v-if="isMaker" class="space-y-1">
                       <div class="text-xs text-gray-700">Покупатель:</div>
                       <div v-if="deal.contact_telegram" class="font-medium">
-                        Telegram: {{ deal.contact_telegram }}
+                        <span class="text-xs text-gray-600">Telegram:</span>
+                        <a 
+                          :href="`https://t.me/${deal.contact_telegram.replace('@', '')}`"
+                          target="_blank"
+                          class="text-blue-600 hover:underline ml-1"
+                        >
+                          {{ deal.contact_telegram }}
+                        </a>
                       </div>
                       <div v-if="deal.contact_phone" class="font-medium">
-                        Телефон: {{ deal.contact_phone }}
+                        <span class="text-xs text-gray-600">Телефон:</span>
+                        <button 
+                          @click="copyPhone(deal.contact_phone)"
+                          class="text-blue-600 hover:underline ml-1"
+                        >
+                          {{ deal.contact_phone }}
+                          <span class="text-xs ml-1">📋</span>
+                        </button>
                       </div>
                     </div>
                     <!-- Show maker contacts to taker -->
                     <div v-if="isTaker" class="space-y-1">
                       <div class="text-xs text-gray-700">Продавец:</div>
                       <div v-if="deal.maker_id?.username" class="font-medium">
-                        Telegram: @{{ deal.maker_id.username }}
+                        <span class="text-xs text-gray-600">Telegram:</span>
+                        <a 
+                          :href="`https://t.me/${deal.maker_id.username}`"
+                          target="_blank"
+                          class="text-blue-600 hover:underline ml-1"
+                        >
+                          @{{ deal.maker_id.username }}
+                        </a>
                       </div>
                     </div>
                   </div>
                 </div>
                 
+                <!-- Confirmation Status -->
+                <div v-if="deal.status === 'accepted'" class="p-3 bg-yellow-50 rounded-lg mb-2">
+                  <p class="text-xs text-yellow-900 font-semibold mb-2">
+                    Подтверждение завершения:
+                  </p>
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between text-xs">
+                      <span>Продавец:</span>
+                      <span :class="deal.maker_confirmed ? 'text-green-600 font-semibold' : 'text-gray-400'">
+                        {{ deal.maker_confirmed ? '✅ Подтверждено' : '⏳ Ожидается' }}
+                      </span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                      <span>Покупатель:</span>
+                      <span :class="deal.taker_confirmed ? 'text-green-600 font-semibold' : 'text-gray-400'">
+                        {{ deal.taker_confirmed ? '✅ Подтверждено' : '⏳ Ожидается' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
                 <button 
+                  v-if="!hasUserConfirmed"
                   @click="updateStatus('completed')"
                   class="w-full px-3 py-2.5 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors"
                 >
                   ✅ Подтвердить успешную сделку
                 </button>
+                <div v-else class="p-3 bg-green-50 rounded-lg text-center">
+                  <p class="text-sm text-green-700 font-medium">
+                    ✅ Вы подтвердили завершение сделки
+                  </p>
+                  <p class="text-xs text-green-600 mt-1">
+                    Ожидаем подтверждения от второй стороны
+                  </p>
+                </div>
                 <button 
                   @click="updateStatus('disputed')"
                   class="w-full px-3 py-2.5 bg-yellow-500 text-white rounded-lg text-sm font-semibold hover:bg-yellow-600 transition-colors"
@@ -367,6 +418,13 @@ const canPerformActions = computed(() => {
   return deal.value && (isMaker.value || isTaker.value);
 });
 
+const hasUserConfirmed = computed(() => {
+  if (!deal.value) return false;
+  if (isMaker.value) return deal.value.maker_confirmed;
+  if (isTaker.value) return deal.value.taker_confirmed;
+  return false;
+});
+
 const dealSteps = [
   { key: 'pending', number: 1, label: 'Ожидание' },
   { key: 'accepted', number: 2, label: 'Принята' },
@@ -401,21 +459,52 @@ async function loadMessages() {
 
 async function updateStatus(status) {
   try {
-    await dealsStore.updateDealStatus(dealId.value, status);
-    deal.value.status = status;
+    const response = await dealsStore.updateDealStatus(dealId.value, status);
+    
+    // Update local deal data with response
+    if (response) {
+      deal.value = { ...deal.value, ...response };
+    }
     
     if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.showAlert(getStatusUpdateMessage(status));
+      if (status === 'completed' && !deal.value.status !== 'completed') {
+        window.Telegram.WebApp.showAlert('Вы подтвердили завершение сделки. Ожидаем подтверждения от второй стороны.');
+      } else {
+        window.Telegram.WebApp.showAlert(getStatusUpdateMessage(status));
+      }
     }
     
     // If completed or cancelled, redirect to deals list after a delay
-    if (status === 'completed' || status === 'cancelled') {
+    if (deal.value.status === 'completed' || deal.value.status === 'cancelled') {
       setTimeout(() => {
         router.push('/deals');
       }, 2000);
     }
   } catch (error) {
     console.error('Update status error:', error);
+  }
+}
+
+function copyPhone(phone) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(phone).then(() => {
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showAlert('Телефон скопирован в буфер обмена');
+      } else {
+        alert('Телефон скопирован в буфер обмена');
+      }
+    }).catch(() => {
+      // Fallback для старых браузеров
+      const textArea = document.createElement('textarea');
+      textArea.value = phone;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showAlert('Телефон скопирован в буфер обмена');
+      }
+    });
   }
 }
 

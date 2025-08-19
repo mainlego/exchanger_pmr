@@ -62,6 +62,8 @@ const dealSchema = new mongoose.Schema({
   message: String,
   contact_telegram: String,
   contact_phone: String,
+  maker_confirmed: { type: Boolean, default: false },
+  taker_confirmed: { type: Boolean, default: false },
   completed_at: Date
 }, { timestamps: true });
 
