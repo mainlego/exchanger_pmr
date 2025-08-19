@@ -28,10 +28,12 @@ export const useOffersStore = defineStore('offers', () => {
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
       
       const response = await api.get('/offers', { params });
-      // Normalize MongoDB _id to id
+      // Normalize MongoDB _id to id and preserve user_id for navigation
       offers.value = response.data.map(offer => ({
         ...offer,
-        id: offer._id || offer.id
+        id: offer._id || offer.id,
+        // Ensure user_id is preserved for navigation
+        user_id: offer.user_id
       }));
     } catch (error) {
       console.error('Fetch offers error:', error);
@@ -43,11 +45,13 @@ export const useOffersStore = defineStore('offers', () => {
   async function fetchOffer(id) {
     try {
       const response = await api.get(`/offers/${id}`);
-      // Normalize MongoDB _id to id
+      // Normalize MongoDB _id to id and preserve user_id for navigation
       if (response.data) {
         return {
           ...response.data,
-          id: response.data._id || response.data.id
+          id: response.data._id || response.data.id,
+          // Ensure user_id is preserved for navigation
+          user_id: response.data.user_id
         };
       }
       return response.data;
@@ -63,10 +67,12 @@ export const useOffersStore = defineStore('offers', () => {
       const response = await api.post('/offers', offerData);
       console.log('Offer created:', response.data);
       
-      // Normalize MongoDB _id to id
+      // Normalize MongoDB _id to id and preserve user_id for navigation
       const normalizedOffer = response.data ? {
         ...response.data,
-        id: response.data._id || response.data.id
+        id: response.data._id || response.data.id,
+        // Ensure user_id is preserved for navigation
+        user_id: response.data.user_id
       } : response.data;
       
       // Add to local store
@@ -86,7 +92,9 @@ export const useOffersStore = defineStore('offers', () => {
       const response = await api.put(`/offers/${id}`, updates);
       const normalizedOffer = response.data ? {
         ...response.data,
-        id: response.data._id || response.data.id
+        id: response.data._id || response.data.id,
+        // Ensure user_id is preserved for navigation
+        user_id: response.data.user_id
       } : response.data;
       
       const index = offers.value.findIndex(o => (o.id === id || o._id === id));
@@ -136,7 +144,9 @@ export const useOffersStore = defineStore('offers', () => {
   function handleNewOffer(offer) {
     const normalizedOffer = {
       ...offer,
-      id: offer._id || offer.id
+      id: offer._id || offer.id,
+      // Ensure user_id is preserved for navigation
+      user_id: offer.user_id
     };
     offers.value.unshift(normalizedOffer);
   }
@@ -144,7 +154,9 @@ export const useOffersStore = defineStore('offers', () => {
   function handleOfferUpdate(offer) {
     const normalizedOffer = {
       ...offer,
-      id: offer._id || offer.id
+      id: offer._id || offer.id,
+      // Ensure user_id is preserved for navigation
+      user_id: offer.user_id
     };
     const index = offers.value.findIndex(o => (o.id === normalizedOffer.id || o._id === normalizedOffer.id));
     if (index !== -1) {
