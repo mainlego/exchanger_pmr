@@ -1,8 +1,9 @@
 const router = require('express').Router();
 const { authMiddleware } = require('../middleware/auth');
-const bot = require('../bot');
+const axios = require('axios');
 
 const ADMIN_GROUP_ID = -4818184433; // ID группы администраторов
+const BOT_TOKEN = process.env.BOT_TOKEN || '7841546087:AAF3sJGQb88LhKYVCJcFhPg9fOxROu7Hm4o';
 
 // Создать жалобу
 router.post('/', authMiddleware, async (req, res) => {
@@ -30,9 +31,12 @@ router.post('/', authMiddleware, async (req, res) => {
     message += `\n<b>Описание проблемы:</b>\n${description}\n`;
     message += `\n<b>Время:</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}`;
     
-    // Отправляем сообщение в группу администраторов
+    // Отправляем сообщение в группу администраторов через Telegram Bot API
     try {
-      await bot.telegram.sendMessage(ADMIN_GROUP_ID, message, {
+      const telegramUrl = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+      await axios.post(telegramUrl, {
+        chat_id: ADMIN_GROUP_ID,
+        text: message,
         parse_mode: 'HTML'
       });
       
@@ -48,7 +52,7 @@ router.post('/', authMiddleware, async (req, res) => {
         message: 'Report submitted successfully' 
       });
     } catch (botError) {
-      console.error('Failed to send report to Telegram:', botError);
+      console.error('Failed to send report to Telegram:', botError.response?.data || botError.message);
       
       // Даже если не удалось отправить в Telegram, возвращаем успех
       // чтобы пользователь думал, что жалоба отправлена
