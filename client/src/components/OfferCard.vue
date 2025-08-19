@@ -156,11 +156,13 @@ function viewUserProfile() {
     ? props.offer.user_id 
     : props.offer.user_id?._id || props.offer.user_id?.id;
     
-  if (userId) {
-    console.log('OfferCard navigating to profile:', userId);
+  console.log('OfferCard viewUserProfile - offer data:', props.offer);
+  console.log('OfferCard viewUserProfile - extracted userId:', userId);
+    
+  if (userId && userId !== 'undefined') {
     router.push(`/users/${userId}`);
   } else {
-    console.error('No user_id found in offer:', props.offer);
+    console.error('No valid user_id found in offer:', props.offer);
   }
 }
 

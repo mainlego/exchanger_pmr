@@ -300,11 +300,16 @@ const offer = ref(null);
 const loading = ref(true);
 
 const isOwner = computed(() => {
-  return offer.value && authStore.user && 
-    (offer.value.user_id === authStore.user._id || 
-     offer.value.user_id === authStore.user.id ||
-     offer.value.user_id?._id === authStore.user._id ||
-     offer.value.user_id?._id === authStore.user.id);
+  if (!offer.value || !authStore.user) return false;
+  
+  // user_id может быть строкой (ID) или объектом
+  const ownerId = typeof offer.value.user_id === 'string' 
+    ? offer.value.user_id 
+    : offer.value.user_id?._id || offer.value.user_id?.id;
+    
+  const currentUserId = authStore.user._id || authStore.user.id;
+  
+  return ownerId === currentUserId;
 });
 
 onMounted(async () => {

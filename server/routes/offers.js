@@ -42,20 +42,27 @@ router.get('/', async (req, res) => {
       .lean();
 
     // Форматируем ответ - сохраняем user_id как строку для навигации
-    const formattedOffers = offers.map(offer => ({
-      ...offer,
-      user_id: offer.user_id?._id || offer.user_id, // Сохраняем ID для навигации
-      username: offer.user_id?.username,
-      first_name: offer.user_id?.first_name,
-      last_name: offer.user_id?.last_name,
-      photo_url: offer.user_id?.photo_url,
-      rating: offer.user_id?.rating,
-      deals_count: offer.user_id?.deals_count,
-      is_verified: offer.user_id?.is_verified,
-      is_online: offer.user_id?.is_online,
-      last_seen: offer.user_id?.last_seen
-    }));
+    const formattedOffers = offers.map(offer => {
+      const userId = offer.user_id?._id?.toString() || offer.user_id?.toString();
+      console.log('Formatting offer - original user_id:', offer.user_id);
+      console.log('Formatting offer - extracted userId:', userId);
+      
+      return {
+        ...offer,
+        user_id: userId, // Сохраняем ID как строку для навигации
+        username: offer.user_id?.username,
+        first_name: offer.user_id?.first_name,
+        last_name: offer.user_id?.last_name,
+        photo_url: offer.user_id?.photo_url,
+        rating: offer.user_id?.rating,
+        deals_count: offer.user_id?.deals_count,
+        is_verified: offer.user_id?.is_verified,
+        is_online: offer.user_id?.is_online,
+        last_seen: offer.user_id?.last_seen
+      };
+    });
     
+    console.log('Sending formatted offers, first offer user_id:', formattedOffers[0]?.user_id);
     res.json(formattedOffers);
   } catch (error) {
     console.error('Get offers error:', error);
@@ -117,9 +124,10 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     // Форматируем ответ для frontend - сохраняем user_id как строку для навигации
+    const userId = populatedOffer.user_id?._id?.toString() || populatedOffer.user_id?.toString();
     const responseOffer = {
       ...populatedOffer,
-      user_id: populatedOffer.user_id?._id || populatedOffer.user_id, // Сохраняем ID для навигации
+      user_id: userId, // Сохраняем ID как строку для навигации
       username: populatedOffer.user_id?.username,
       first_name: populatedOffer.user_id?.first_name,
       last_name: populatedOffer.user_id?.last_name,
@@ -158,9 +166,10 @@ router.get('/:id', async (req, res) => {
     await Offer.findByIdAndUpdate(id, { $inc: { views_count: 1 } });
 
     // Форматируем ответ - сохраняем user_id как строку для навигации
+    const userId = offer.user_id?._id?.toString() || offer.user_id?.toString();
     const formattedOffer = {
       ...offer,
-      user_id: offer.user_id?._id || offer.user_id, // Сохраняем ID для навигации
+      user_id: userId, // Сохраняем ID как строку для навигации
       username: offer.user_id?.username,
       first_name: offer.user_id?.first_name,
       last_name: offer.user_id?.last_name,
@@ -264,17 +273,20 @@ router.get('/my', authMiddleware, async (req, res) => {
       .lean();
 
     // Форматируем ответ - сохраняем user_id как строку для навигации
-    const formattedOffers = offers.map(offer => ({
-      ...offer,
-      user_id: offer.user_id?._id || offer.user_id, // Сохраняем ID для навигации
-      username: offer.user_id?.username,
-      first_name: offer.user_id?.first_name,
-      last_name: offer.user_id?.last_name,
-      photo_url: offer.user_id?.photo_url,
-      rating: offer.user_id?.rating,
-      deals_count: offer.user_id?.deals_count,
-      is_verified: offer.user_id?.is_verified
-    }));
+    const formattedOffers = offers.map(offer => {
+      const userId = offer.user_id?._id?.toString() || offer.user_id?.toString();
+      return {
+        ...offer,
+        user_id: userId, // Сохраняем ID как строку для навигации
+        username: offer.user_id?.username,
+        first_name: offer.user_id?.first_name,
+        last_name: offer.user_id?.last_name,
+        photo_url: offer.user_id?.photo_url,
+        rating: offer.user_id?.rating,
+        deals_count: offer.user_id?.deals_count,
+        is_verified: offer.user_id?.is_verified
+      };
+    });
 
     res.json(formattedOffers);
   } catch (error) {
@@ -302,17 +314,20 @@ router.get('/user/:userId', async (req, res) => {
       .lean();
 
     // Форматируем ответ - сохраняем user_id как строку для навигации
-    const formattedOffers = offers.map(offer => ({
-      ...offer,
-      user_id: offer.user_id?._id || offer.user_id, // Сохраняем ID для навигации
-      username: offer.user_id?.username,
-      first_name: offer.user_id?.first_name,
-      last_name: offer.user_id?.last_name,
-      photo_url: offer.user_id?.photo_url,
-      rating: offer.user_id?.rating,
-      deals_count: offer.user_id?.deals_count,
-      is_verified: offer.user_id?.is_verified
-    }));
+    const formattedOffers = offers.map(offer => {
+      const userId = offer.user_id?._id?.toString() || offer.user_id?.toString();
+      return {
+        ...offer,
+        user_id: userId, // Сохраняем ID как строку для навигации
+        username: offer.user_id?.username,
+        first_name: offer.user_id?.first_name,
+        last_name: offer.user_id?.last_name,
+        photo_url: offer.user_id?.photo_url,
+        rating: offer.user_id?.rating,
+        deals_count: offer.user_id?.deals_count,
+        is_verified: offer.user_id?.is_verified
+      };
+    });
 
     res.json(formattedOffers);
   } catch (error) {

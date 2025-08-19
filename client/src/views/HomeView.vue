@@ -167,7 +167,11 @@ import BottomNav from '@/components/BottomNav.vue';
 const offersStore = useOffersStore();
 
 const loading = computed(() => offersStore.loading);
-const recentOffers = computed(() => offersStore.activeOffers.slice(0, 5));
+const recentOffers = computed(() => {
+  const offers = offersStore.activeOffers.slice(0, 5);
+  console.log('HomeView: Recent offers:', offers);
+  return offers;
+});
 
 // Mock current rates for demo
 const currentRates = ref([
