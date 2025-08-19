@@ -147,6 +147,7 @@
             v-for="offer in recentOffers" 
             :key="offer.id" 
             :offer="offer"
+            :disable-profile-navigation="true"
             class="transform hover:scale-[1.02] transition-all duration-300"
           />
         </transition-group>
@@ -167,11 +168,7 @@ import BottomNav from '@/components/BottomNav.vue';
 const offersStore = useOffersStore();
 
 const loading = computed(() => offersStore.loading);
-const recentOffers = computed(() => {
-  const offers = offersStore.activeOffers.slice(0, 5);
-  console.log('HomeView: Recent offers:', offers);
-  return offers;
-});
+const recentOffers = computed(() => offersStore.activeOffers.slice(0, 5));
 
 // Mock current rates for demo
 const currentRates = ref([

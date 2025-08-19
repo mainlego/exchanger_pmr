@@ -17,7 +17,8 @@
       "Bash(npm run clear-webhook:*)",
       "Bash(taskkill:*)",
       "Bash(cmd.exe //c \"taskkill /PID 34708 /F\")",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

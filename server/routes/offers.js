@@ -44,9 +44,6 @@ router.get('/', async (req, res) => {
     // Форматируем ответ - сохраняем user_id как строку для навигации
     const formattedOffers = offers.map(offer => {
       const userId = offer.user_id?._id?.toString() || offer.user_id?.toString();
-      console.log('Formatting offer - original user_id:', offer.user_id);
-      console.log('Formatting offer - extracted userId:', userId);
-      
       return {
         ...offer,
         user_id: userId, // Сохраняем ID как строку для навигации
@@ -62,7 +59,6 @@ router.get('/', async (req, res) => {
       };
     });
     
-    console.log('Sending formatted offers, first offer user_id:', formattedOffers[0]?.user_id);
     res.json(formattedOffers);
   } catch (error) {
     console.error('Get offers error:', error);

@@ -75,7 +75,12 @@
         
         <!-- User Info with Rating -->
         <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-          <div @click.stop="viewUserProfile" class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-1 -m-1 transition-colors">
+          <div 
+            @click.stop="viewUserProfile" 
+            :class="[
+              'flex items-center space-x-3 rounded-lg p-1 -m-1 transition-colors',
+              !disableProfileNavigation ? 'cursor-pointer hover:bg-gray-50' : ''
+            ]">
             <!-- User Avatar -->
             <div class="relative">
               <div v-if="offer.photo_url" class="w-10 h-10 rounded-full overflow-hidden">
@@ -135,6 +140,10 @@ const props = defineProps({
   offer: {
     type: Object,
     required: true
+  },
+  disableProfileNavigation: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -151,13 +160,13 @@ const typeBadgeGradient = computed(() => {
 });
 
 function viewUserProfile() {
+  if (props.disableProfileNavigation) return;
+  
   // user_id должен быть строкой с ID из сервера
   const userId = typeof props.offer.user_id === 'string' 
     ? props.offer.user_id 
     : props.offer.user_id?._id || props.offer.user_id?.id;
     
-  console.log('OfferCard viewUserProfile - offer data:', props.offer);
-  console.log('OfferCard viewUserProfile - extracted userId:', userId);
     
   if (userId && userId !== 'undefined') {
     router.push(`/users/${userId}`);
