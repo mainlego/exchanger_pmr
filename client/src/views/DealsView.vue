@@ -82,7 +82,15 @@
             <!-- Participants -->
             <div class="flex items-center justify-between pt-2 border-t border-gray-100">
               <div class="flex items-center space-x-2">
-                <div class="w-6 h-6 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                <div v-if="deal.maker_id?.photo_url" class="w-6 h-6 rounded-full overflow-hidden">
+                  <img 
+                    :src="deal.maker_id.photo_url" 
+                    :alt="deal.maker_id.first_name || deal.maker_id.username"
+                    class="w-full h-full object-cover"
+                    @error="handleImageError"
+                  />
+                </div>
+                <div v-else class="w-6 h-6 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
                   {{ getInitial(deal.maker_id) }}
                 </div>
                 <div>
@@ -104,7 +112,15 @@
                   </div>
                   <div class="text-xs text-gray-500">Покупатель</div>
                 </div>
-                <div class="w-6 h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                <div v-if="deal.taker_id?.photo_url" class="w-6 h-6 rounded-full overflow-hidden">
+                  <img 
+                    :src="deal.taker_id.photo_url" 
+                    :alt="deal.taker_id.first_name || deal.taker_id.username"
+                    class="w-full h-full object-cover"
+                    @error="handleImageError"
+                  />
+                </div>
+                <div v-else class="w-6 h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
                   {{ getInitial(deal.taker_id) }}
                 </div>
               </div>
@@ -255,6 +271,11 @@ function needsAction(deal) {
 function getInitial(user) {
   if (!user) return '?';
   return (user.first_name || user.username || '?')[0].toUpperCase();
+}
+
+function handleImageError(event) {
+  // Hide the image if it fails to load
+  event.target.style.display = 'none';
 }
 
 function getStatusClass(status) {

@@ -204,17 +204,47 @@
             
             <!-- Participants -->
             <div class="grid grid-cols-2 gap-2">
-              <div class="p-3 bg-blue-50 rounded-lg" @click="viewProfile(deal.maker_id)">
-                <div class="text-xs text-blue-600 mb-1">Продавец</div>
-                <div class="font-semibold text-sm">{{ deal.maker_id?.first_name || 'Продавец' }}</div>
-                <div class="text-xs text-gray-600">⭐ {{ deal.maker_id?.rating || 0 }}</div>
-                <div class="text-xs text-blue-600 mt-1">Профиль →</div>
+              <div class="p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors" @click="viewProfile(deal.maker_id)">
+                <div class="flex items-center space-x-2 mb-2">
+                  <div v-if="deal.maker_id?.photo_url" class="w-10 h-10 rounded-full overflow-hidden">
+                    <img 
+                      :src="deal.maker_id.photo_url" 
+                      :alt="deal.maker_id.first_name || deal.maker_id.username"
+                      class="w-full h-full object-cover"
+                      @error="handleImageError"
+                    />
+                  </div>
+                  <div v-else class="w-10 h-10 bg-blue-200 rounded-full flex items-center justify-center text-sm font-bold text-blue-700">
+                    {{ (deal.maker_id?.first_name || deal.maker_id?.username || 'П')[0].toUpperCase() }}
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-xs text-blue-600">Продавец</div>
+                    <div class="font-semibold text-sm">{{ deal.maker_id?.first_name || 'Продавец' }}</div>
+                  </div>
+                </div>
+                <div class="text-xs text-gray-600">⭐ {{ (deal.maker_id?.rating || 0).toFixed(1) }}</div>
+                <div class="text-xs text-blue-600 mt-1 font-medium">Смотреть профиль →</div>
               </div>
-              <div class="p-3 bg-green-50 rounded-lg" @click="viewProfile(deal.taker_id)">
-                <div class="text-xs text-green-600 mb-1">Покупатель</div>
-                <div class="font-semibold text-sm">{{ deal.taker_id?.first_name || 'Покупатель' }}</div>
-                <div class="text-xs text-gray-600">⭐ {{ deal.taker_id?.rating || 0 }}</div>
-                <div class="text-xs text-green-600 mt-1">Профиль →</div>
+              <div class="p-3 bg-green-50 rounded-lg cursor-pointer hover:bg-green-100 transition-colors" @click="viewProfile(deal.taker_id)">
+                <div class="flex items-center space-x-2 mb-2">
+                  <div v-if="deal.taker_id?.photo_url" class="w-10 h-10 rounded-full overflow-hidden">
+                    <img 
+                      :src="deal.taker_id.photo_url" 
+                      :alt="deal.taker_id.first_name || deal.taker_id.username"
+                      class="w-full h-full object-cover"
+                      @error="handleImageError"
+                    />
+                  </div>
+                  <div v-else class="w-10 h-10 bg-green-200 rounded-full flex items-center justify-center text-sm font-bold text-green-700">
+                    {{ (deal.taker_id?.first_name || deal.taker_id?.username || 'П')[0].toUpperCase() }}
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-xs text-green-600">Покупатель</div>
+                    <div class="font-semibold text-sm">{{ deal.taker_id?.first_name || 'Покупатель' }}</div>
+                  </div>
+                </div>
+                <div class="text-xs text-gray-600">⭐ {{ (deal.taker_id?.rating || 0).toFixed(1) }}</div>
+                <div class="text-xs text-green-600 mt-1 font-medium">Смотреть профиль →</div>
               </div>
             </div>
             
@@ -241,17 +271,52 @@
           <div v-if="messages.length > 0" class="space-y-2 mb-3 max-h-48 overflow-y-auto">
             <div v-for="msg in messages" :key="msg.id" 
                  :class="[
-                   'p-2 rounded-lg text-sm',
-                   msg.user_id === authStore.user?.id 
-                     ? 'bg-indigo-100 ml-auto max-w-[80%]' 
-                     : 'bg-gray-100 mr-auto max-w-[80%]'
+                   'flex items-start space-x-2',
+                   msg.user_id === authStore.user?.id ? 'justify-end' : 'justify-start'
                  ]">
-              <div class="text-xs font-medium mb-1">
-                {{ msg.user_id === authStore.user?.id ? 'Вы' : msg.user_id?.first_name || 'Пользователь' }}
+              <!-- Avatar for other user's messages -->
+              <div v-if="msg.user_id !== authStore.user?.id" class="flex-shrink-0">
+                <div v-if="getUserPhoto(msg.user_id)" class="w-8 h-8 rounded-full overflow-hidden">
+                  <img 
+                    :src="getUserPhoto(msg.user_id)" 
+                    :alt="getUserName(msg.user_id)"
+                    class="w-full h-full object-cover"
+                    @error="handleImageError"
+                  />
+                </div>
+                <div v-else class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                  {{ (getUserName(msg.user_id) || 'П')[0].toUpperCase() }}
+                </div>
               </div>
-              <div class="text-gray-700">{{ msg.message }}</div>
-              <div class="text-xs text-gray-500 mt-1">
-                {{ formatTime(msg.createdAt || msg.created_at) }}
+              
+              <div :class="[
+                'p-2 rounded-lg text-sm max-w-[70%]',
+                msg.user_id === authStore.user?.id 
+                  ? 'bg-indigo-100' 
+                  : 'bg-gray-100'
+              ]">
+                <div class="text-xs font-medium mb-1">
+                  {{ msg.user_id === authStore.user?.id ? 'Вы' : getUserName(msg.user_id) || 'Пользователь' }}
+                </div>
+                <div class="text-gray-700">{{ msg.message }}</div>
+                <div class="text-xs text-gray-500 mt-1">
+                  {{ formatTime(msg.createdAt || msg.created_at) }}
+                </div>
+              </div>
+              
+              <!-- Avatar for current user's messages -->
+              <div v-if="msg.user_id === authStore.user?.id" class="flex-shrink-0">
+                <div v-if="authStore.user?.photo_url" class="w-8 h-8 rounded-full overflow-hidden">
+                  <img 
+                    :src="authStore.user.photo_url" 
+                    :alt="authStore.user.first_name || authStore.user.username"
+                    class="w-full h-full object-cover"
+                    @error="handleImageError"
+                  />
+                </div>
+                <div v-else class="w-8 h-8 bg-indigo-400 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                  {{ (authStore.user?.first_name || authStore.user?.username || 'В')[0].toUpperCase() }}
+                </div>
               </div>
             </div>
           </div>
@@ -581,6 +646,51 @@ function viewProfile(user) {
   
   console.log('Navigating to user profile with ID:', userId);
   router.push(`/users/${userId}`);
+}
+
+function handleImageError(event) {
+  // Hide the image if it fails to load
+  event.target.style.display = 'none';
+}
+
+function getUserPhoto(userId) {
+  // If userId is a string, check if it matches maker or taker
+  if (typeof userId === 'string') {
+    if (deal.value?.maker_id?._id === userId || deal.value?.maker_id?.id === userId) {
+      return deal.value.maker_id.photo_url;
+    }
+    if (deal.value?.taker_id?._id === userId || deal.value?.taker_id?.id === userId) {
+      return deal.value.taker_id.photo_url;
+    }
+    return null;
+  }
+  
+  // If userId is an object with user data
+  if (typeof userId === 'object' && userId) {
+    return userId.photo_url;
+  }
+  
+  return null;
+}
+
+function getUserName(userId) {
+  // If userId is a string, check if it matches maker or taker
+  if (typeof userId === 'string') {
+    if (deal.value?.maker_id?._id === userId || deal.value?.maker_id?.id === userId) {
+      return deal.value.maker_id.first_name || deal.value.maker_id.username;
+    }
+    if (deal.value?.taker_id?._id === userId || deal.value?.taker_id?.id === userId) {
+      return deal.value.taker_id.first_name || deal.value.taker_id.username;
+    }
+    return null;
+  }
+  
+  // If userId is an object with user data
+  if (typeof userId === 'object' && userId) {
+    return userId.first_name || userId.username;
+  }
+  
+  return null;
 }
 
 function getStatusClass(status) {
