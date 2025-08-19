@@ -165,13 +165,21 @@
 
             <!-- User & Location -->
             <div class="flex items-center justify-between pt-2 border-t border-gray-100">
-              <div class="flex items-center space-x-2">
-                <div class="w-6 h-6 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  {{ (offer.user?.first_name || offer.user?.username || 'U')[0].toUpperCase() }}
+              <div @click.stop="viewUserProfile(offer)" class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-lg p-1 -m-1 transition-colors">
+                <div v-if="offer.photo_url" class="w-6 h-6 rounded-full overflow-hidden">
+                  <img 
+                    :src="offer.photo_url" 
+                    :alt="offer.first_name || offer.username"
+                    class="w-full h-full object-cover"
+                    @error="handleImageError"
+                  />
+                </div>
+                <div v-else class="w-6 h-6 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  {{ (offer.first_name || offer.username || 'U')[0].toUpperCase() }}
                 </div>
                 <div class="text-xs">
-                  <div class="font-medium text-gray-900">{{ offer.user?.first_name || 'Пользователь' }}</div>
-                  <div class="text-gray-500">⭐ {{ offer.user?.rating || 0 }}</div>
+                  <div class="font-medium text-gray-900">{{ offer.first_name || offer.username || 'Пользователь' }}</div>
+                  <div class="text-gray-500">⭐ {{ (offer.rating || 0).toFixed(1) }}</div>
                 </div>
               </div>
               <div class="flex items-center text-xs text-gray-600">
@@ -329,6 +337,21 @@ function formatTime(date) {
     day: 'numeric',
     month: 'short'
   });
+}
+
+function viewUserProfile(offer) {
+  // user_id может быть либо строкой (ID) либо объектом
+  const userId = typeof offer.user_id === 'string' 
+    ? offer.user_id 
+    : offer.user_id?._id || offer.user_id?.id;
+    
+  if (userId) {
+    router.push(`/users/${userId}`);
+  }
+}
+
+function handleImageError(event) {
+  event.target.style.display = 'none';
 }
 
 function getDistrictName(district) {

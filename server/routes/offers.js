@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
     sortOptions[sortField] = order === 'ASC' ? 1 : -1;
 
     const offers = await Offer.find(filter)
-      .populate('user_id', 'username first_name last_name rating deals_count is_verified is_online last_seen')
+      .populate('user_id', 'username first_name last_name photo_url rating deals_count is_verified is_online last_seen')
       .sort(sortOptions)
       .limit(50)
       .lean();
@@ -47,6 +47,7 @@ router.get('/', async (req, res) => {
       username: offer.user_id?.username,
       first_name: offer.user_id?.first_name,
       last_name: offer.user_id?.last_name,
+      photo_url: offer.user_id?.photo_url,
       rating: offer.user_id?.rating,
       deals_count: offer.user_id?.deals_count,
       is_verified: offer.user_id?.is_verified,
@@ -102,7 +103,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
     // Заполняем данные пользователя
     const populatedOffer = await Offer.findById(offer._id)
-      .populate('user_id', 'username first_name last_name rating deals_count is_verified')
+      .populate('user_id', 'username first_name last_name photo_url rating deals_count is_verified')
       .lean();
     
     console.log('Offer created:', populatedOffer);
@@ -120,6 +121,7 @@ router.post('/', authMiddleware, async (req, res) => {
       username: populatedOffer.user_id?.username,
       first_name: populatedOffer.user_id?.first_name,
       last_name: populatedOffer.user_id?.last_name,
+      photo_url: populatedOffer.user_id?.photo_url,
       rating: populatedOffer.user_id?.rating,
       deals_count: populatedOffer.user_id?.deals_count,
       is_verified: populatedOffer.user_id?.is_verified
@@ -143,7 +145,7 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
 
     const offer = await Offer.findById(id)
-      .populate('user_id', 'username first_name last_name rating deals_count is_verified is_online last_seen telegram_id')
+      .populate('user_id', 'username first_name last_name photo_url rating deals_count is_verified is_online last_seen telegram_id')
       .lean();
 
     if (!offer) {
@@ -159,6 +161,7 @@ router.get('/:id', async (req, res) => {
       username: offer.user_id?.username,
       first_name: offer.user_id?.first_name,
       last_name: offer.user_id?.last_name,
+      photo_url: offer.user_id?.photo_url,
       rating: offer.user_id?.rating,
       deals_count: offer.user_id?.deals_count,
       is_verified: offer.user_id?.is_verified,
@@ -240,6 +243,42 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Получить мои предложения
+router.get('/my', authMiddleware, async (req, res) => {
+  try {
+    const { active_only = 'true' } = req.query;
+
+    const filter = { user_id: req.user.id };
+    
+    if (active_only === 'true') {
+      filter.is_active = true;
+      filter.expires_at = { $gt: new Date() };
+    }
+
+    const offers = await Offer.find(filter)
+      .populate('user_id', 'username first_name last_name photo_url rating deals_count is_verified')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Форматируем ответ
+    const formattedOffers = offers.map(offer => ({
+      ...offer,
+      username: offer.user_id?.username,
+      first_name: offer.user_id?.first_name,
+      last_name: offer.user_id?.last_name,
+      photo_url: offer.user_id?.photo_url,
+      rating: offer.user_id?.rating,
+      deals_count: offer.user_id?.deals_count,
+      is_verified: offer.user_id?.is_verified
+    }));
+
+    res.json(formattedOffers);
+  } catch (error) {
+    console.error('Get my offers error:', error);
+    res.status(500).json({ error: 'Failed to get offers' });
+  }
+});
+
 // Получить предложения пользователя
 router.get('/user/:userId', async (req, res) => {
   try {
@@ -254,10 +293,23 @@ router.get('/user/:userId', async (req, res) => {
     }
 
     const offers = await Offer.find(filter)
+      .populate('user_id', 'username first_name last_name photo_url rating deals_count is_verified')
       .sort({ createdAt: -1 })
       .lean();
 
-    res.json(offers);
+    // Форматируем ответ
+    const formattedOffers = offers.map(offer => ({
+      ...offer,
+      username: offer.user_id?.username,
+      first_name: offer.user_id?.first_name,
+      last_name: offer.user_id?.last_name,
+      photo_url: offer.user_id?.photo_url,
+      rating: offer.user_id?.rating,
+      deals_count: offer.user_id?.deals_count,
+      is_verified: offer.user_id?.is_verified
+    }));
+
+    res.json(formattedOffers);
   } catch (error) {
     console.error('Get user offers error:', error);
     res.status(500).json({ error: 'Failed to get user offers' });

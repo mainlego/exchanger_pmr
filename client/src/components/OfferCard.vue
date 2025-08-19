@@ -138,8 +138,13 @@ const typeBadgeGradient = computed(() => {
 });
 
 function viewUserProfile() {
-  if (props.offer.user_id) {
-    router.push(`/users/${props.offer.user_id}`);
+  // user_id может быть либо строкой (ID) либо объектом
+  const userId = typeof props.offer.user_id === 'string' 
+    ? props.offer.user_id 
+    : props.offer.user_id?._id || props.offer.user_id?.id;
+    
+  if (userId) {
+    router.push(`/users/${userId}`);
   }
 }
 
