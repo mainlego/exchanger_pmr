@@ -230,8 +230,11 @@
               <!-- Contact Button -->
               <div v-if="!isOwner" class="mt-4">
                 <button 
-                  @click="createDeal"
+                  @click.prevent="handleCreateDeal"
+                  @touchend.prevent="handleCreateDeal"
+                  type="button"
                   class="w-full px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all"
+                  style="cursor: pointer; -webkit-tap-highlight-color: transparent;"
                 >
                   💬 Начать сделку
                 </button>
@@ -372,8 +375,66 @@ async function deleteOffer() {
   }
 }
 
+let isProcessing = false;
+
+async function handleCreateDeal(event) {
+  console.log('handleCreateDeal called', { event, isProcessing, offerId: offer.value?.id });
+  
+  // Предотвращаем двойные клики и проблемы на iOS
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
+  // Защита от повторных вызовов
+  if (isProcessing) {
+    console.log('Already processing, skipping');
+    return;
+  }
+  isProcessing = true;
+  
+  try {
+    // Проверяем авторизацию
+    if (!authStore.isAuthenticated) {
+      console.log('User not authenticated');
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showAlert('Необходимо авторизоваться для создания сделки');
+      }
+      router.push('/login');
+      return;
+    }
+    
+    // Проверяем наличие offer ID
+    if (!offer.value || !offer.value.id) {
+      console.error('No offer ID available');
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showAlert('Ошибка: предложение не найдено');
+      }
+      return;
+    }
+    
+    console.log('Navigating to create deal page', `/deals/create?offer=${offer.value.id}`);
+    
+    // Переход на страницу создания сделки
+    await router.push(`/deals/create?offer=${offer.value.id}`);
+    
+    console.log('Navigation successful');
+  } catch (error) {
+    console.error('Error navigating to create deal:', error);
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.showAlert('Произошла ошибка. Попробуйте еще раз.');
+    }
+  } finally {
+    // Сброс флага через небольшую задержку для iOS
+    setTimeout(() => {
+      isProcessing = false;
+      console.log('Processing flag reset');
+    }, 300);
+  }
+}
+
+// Для обратной совместимости
 async function createDeal() {
-  // TODO: Implement deal creation
-  router.push(`/deals/create?offer=${offer.value.id}`);
+  return handleCreateDeal();
 }
 </script>

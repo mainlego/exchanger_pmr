@@ -196,6 +196,7 @@
             type="submit"
             :disabled="!agreeToTerms || submitting"
             class="w-full px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style="cursor: pointer; -webkit-appearance: none; -webkit-tap-highlight-color: transparent;"
           >
             {{ submitting ? 'Отправка заявки...' : '🤝 Отправить заявку на сделку' }}
           </button>

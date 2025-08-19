@@ -6,6 +6,42 @@
   body {
     @apply bg-gray-50 text-gray-900;
   }
+  
+  /* iOS Safari click fix */
+  button,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Ensure clickable elements are responsive on iOS */
+  button:active,
+  [role="button"]:active {
+    opacity: 0.9;
+  }
+  
+  /* Fix for iOS form inputs */
+  input,
+  textarea,
+  select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+  
+  /* Prevent iOS zoom on input focus */
+  input[type="text"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="email"],
+  textarea {
+    font-size: 16px;
+  }
 }
 
 @layer components {
