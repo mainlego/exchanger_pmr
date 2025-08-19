@@ -285,7 +285,10 @@ const loading = ref(true);
 
 const isOwner = computed(() => {
   return offer.value && authStore.user && 
-    (offer.value.user_id === authStore.user._id || offer.value.user_id === authStore.user.id);
+    (offer.value.user_id === authStore.user._id || 
+     offer.value.user_id === authStore.user.id ||
+     offer.value.user_id?._id === authStore.user._id ||
+     offer.value.user_id?._id === authStore.user.id);
 });
 
 onMounted(async () => {
@@ -401,6 +404,15 @@ async function handleCreateDeal(event) {
         window.Telegram.WebApp.showAlert('Необходимо авторизоваться для создания сделки');
       }
       router.push('/login');
+      return;
+    }
+    
+    // Проверяем, что пользователь не пытается создать сделку с самим собой
+    if (isOwner.value) {
+      console.error('Cannot create deal with yourself');
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showAlert('Вы не можете создать сделку со своим предложением');
+      }
       return;
     }
     

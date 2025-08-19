@@ -250,6 +250,21 @@ onMounted(async () => {
     if (offerId) {
       offer.value = await offersStore.fetchOffer(offerId);
       
+      // Проверяем, что пользователь не пытается создать сделку со своим предложением
+      if (offer.value && authStore.user) {
+        const offerUserId = offer.value.user_id?._id || offer.value.user_id;
+        const currentUserId = authStore.user._id || authStore.user.id;
+        
+        if (offerUserId === currentUserId) {
+          console.error('Cannot create deal with your own offer');
+          if (window.Telegram?.WebApp) {
+            window.Telegram.WebApp.showAlert('Вы не можете создать сделку со своим предложением');
+          }
+          router.push(`/offers/${offerId}`);
+          return;
+        }
+      }
+      
       // Предзаполнение контактов
       if (authStore.user) {
         contactInfo.value.telegram = `@${authStore.user.username}` || '';
@@ -270,6 +285,20 @@ function formatAmount(amount) {
 
 async function createDeal() {
   if (!agreeToTerms.value) return;
+  
+  // Дополнительная проверка на создание сделки с самим собой
+  if (offer.value && authStore.user) {
+    const offerUserId = offer.value.user_id?._id || offer.value.user_id;
+    const currentUserId = authStore.user._id || authStore.user.id;
+    
+    if (offerUserId === currentUserId) {
+      console.error('Cannot create deal with your own offer');
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showAlert('Вы не можете создать сделку со своим предложением');
+      }
+      return;
+    }
+  }
   
   submitting.value = true;
   
@@ -293,8 +322,15 @@ async function createDeal() {
   } catch (error) {
     console.error('Create deal error:', error);
     
-    if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.showAlert('Ошибка при создании сделки. Попробуйте еще раз.');
+    // Проверяем, если ошибка связана с попыткой создать сделку с самим собой
+    if (error.response?.status === 400 && error.response?.data?.error?.includes('yourself')) {
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showAlert('Вы не можете создать сделку со своим предложением');
+      }
+    } else {
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showAlert('Ошибка при создании сделки. Попробуйте еще раз.');
+      }
     }
   } finally {
     submitting.value = false;
