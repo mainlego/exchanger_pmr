@@ -15,26 +15,6 @@
             </h1>
           </div>
           
-          <!-- Actions for owner -->
-          <div v-if="isOwner" class="flex items-center space-x-2">
-            <button 
-              @click="toggleOffer"
-              :class="[
-                'px-4 py-2 rounded-lg font-medium transition-all',
-                offer.is_active 
-                  ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
-                  : 'bg-green-100 text-green-700 hover:bg-green-200'
-              ]"
-            >
-              {{ offer.is_active ? '⏸ Приостановить' : '▶️ Активировать' }}
-            </button>
-            <button 
-              @click="deleteOffer"
-              class="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition-all"
-            >
-              🗑 Удалить
-            </button>
-          </div>
         </div>
       </div>
     </header>
@@ -181,10 +161,18 @@
         <div class="bg-white rounded-2xl shadow-xl p-6">
           <h2 class="text-lg font-bold text-gray-900 mb-4">Информация о продавце</h2>
           
-          <div class="flex items-center space-x-4">
+          <div @click="viewUserProfile" class="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors">
             <!-- Avatar -->
             <div class="relative">
-              <div class="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+              <div v-if="offer.photo_url" class="w-16 h-16 rounded-full overflow-hidden">
+                <img 
+                  :src="offer.photo_url" 
+                  :alt="offer.first_name || offer.username"
+                  class="w-full h-full object-cover"
+                  @error="handleImageError"
+                />
+              </div>
+              <div v-else class="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                 {{ (offer.first_name || offer.username || 'U')[0].toUpperCase() }}
               </div>
               <div v-if="offer.is_verified" class="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
@@ -226,20 +214,48 @@
                   Был в сети {{ formatLastSeen(offer.last_seen) }}
                 </span>
               </div>
-              
-              <!-- Contact Button -->
-              <div v-if="!isOwner" class="mt-4">
-                <button 
-                  @click.prevent="handleCreateDeal"
-                  @touchend.prevent="handleCreateDeal"
-                  type="button"
-                  class="w-full px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all"
-                  style="cursor: pointer; -webkit-tap-highlight-color: transparent;"
-                >
-                  💬 Начать сделку
-                </button>
+              <!-- View Profile Link -->
+              <div class="mt-2">
+                <span class="text-sm text-indigo-600 font-medium">Смотреть профиль →</span>
               </div>
             </div>
+          </div>
+          
+          <!-- Contact Button -->
+          <div v-if="!isOwner" class="mt-4">
+            <button 
+              @click.prevent="handleCreateDeal"
+              @touchend.prevent="handleCreateDeal"
+              type="button"
+              class="w-full px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all"
+              style="cursor: pointer; -webkit-tap-highlight-color: transparent;"
+            >
+              💬 Начать сделку
+            </button>
+          </div>
+        </div>
+        
+        <!-- Owner Actions -->
+        <div v-if="isOwner" class="bg-white rounded-2xl shadow-xl p-6">
+          <h2 class="text-lg font-bold text-gray-900 mb-4">Управление предложением</h2>
+          <div class="space-y-3">
+            <button 
+              @click="toggleOffer"
+              :class="[
+                'w-full px-4 py-3 rounded-lg font-medium transition-all',
+                offer.is_active 
+                  ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
+                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+              ]"
+            >
+              {{ offer.is_active ? '⏸ Приостановить предложение' : '▶️ Активировать предложение' }}
+            </button>
+            <button 
+              @click="deleteOffer"
+              class="w-full px-4 py-3 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition-all"
+            >
+              🗑 Удалить предложение
+            </button>
           </div>
         </div>
         
@@ -376,6 +392,16 @@ async function deleteOffer() {
   } catch (error) {
     console.error('Delete offer error:', error);
   }
+}
+
+function viewUserProfile() {
+  if (offer.value && offer.value.user_id) {
+    router.push(`/users/${offer.value.user_id}`);
+  }
+}
+
+function handleImageError(event) {
+  event.target.style.display = 'none';
 }
 
 let isProcessing = false;

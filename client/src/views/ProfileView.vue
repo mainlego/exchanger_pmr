@@ -154,8 +154,16 @@
           <div v-if="reviews.length > 0" class="space-y-4">
             <div v-for="review in reviews" :key="review._id" class="p-4 bg-gray-50 rounded-lg">
               <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-sm font-bold text-indigo-600">
+                <div @click="viewUserProfile(review.from_user_id)" class="flex items-center cursor-pointer hover:bg-white rounded-lg p-1 -m-1 transition-colors">
+                  <div v-if="review.from_user_id?.photo_url" class="w-8 h-8 rounded-full overflow-hidden">
+                    <img 
+                      :src="review.from_user_id.photo_url" 
+                      :alt="review.from_user_id.first_name"
+                      class="w-full h-full object-cover"
+                      @error="handleImageError"
+                    />
+                  </div>
+                  <div v-else class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-sm font-bold text-indigo-600">
                     {{ (review.from_user_id?.first_name || 'U')[0] }}
                   </div>
                   <div class="ml-2">
@@ -399,6 +407,12 @@ function formatDate(date) {
 function handleImageError(event) {
   // Скрываем изображение если оно не загрузилось
   event.target.style.display = 'none';
+}
+
+function viewUserProfile(user) {
+  if (user && (user._id || user.id)) {
+    router.push(`/users/${user._id || user.id}`);
+  }
 }
 
 async function submitReport() {

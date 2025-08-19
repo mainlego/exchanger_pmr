@@ -62,10 +62,18 @@
         
         <!-- User Info with Rating -->
         <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-          <div class="flex items-center space-x-3">
+          <div @click.stop="viewUserProfile" class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-1 -m-1 transition-colors">
             <!-- User Avatar -->
             <div class="relative">
-              <div class="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+              <div v-if="offer.photo_url" class="w-10 h-10 rounded-full overflow-hidden">
+                <img 
+                  :src="offer.photo_url" 
+                  :alt="offer.first_name || offer.username"
+                  class="w-full h-full object-cover"
+                  @error="handleImageError"
+                />
+              </div>
+              <div v-else class="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
                 {{ (offer.first_name || offer.username || 'U')[0].toUpperCase() }}
               </div>
               <div v-if="offer.is_verified" class="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
@@ -106,6 +114,9 @@
 
 <script setup>
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 const props = defineProps({
   offer: {
@@ -125,6 +136,16 @@ const typeBadgeGradient = computed(() => {
     ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
     : 'bg-gradient-to-r from-blue-500 to-indigo-500';
 });
+
+function viewUserProfile() {
+  if (props.offer.user_id) {
+    router.push(`/users/${props.offer.user_id}`);
+  }
+}
+
+function handleImageError(event) {
+  event.target.style.display = 'none';
+}
 
 function formatAmount(amount) {
   return new Intl.NumberFormat('ru-RU', {
