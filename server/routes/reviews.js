@@ -214,6 +214,24 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Получить отзывы пользователя
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const reviews = await Review.find({ to_user_id: userId })
+      .populate('from_user_id', 'username first_name last_name photo_url')
+      .populate('deal_id', 'status')
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    res.json(reviews);
+  } catch (error) {
+    console.error('Get user reviews error:', error);
+    res.status(500).json({ error: 'Failed to get user reviews' });
+  }
+});
+
 // Получить статистику отзывов пользователя
 router.get('/user/:userId/stats', async (req, res) => {
   try {

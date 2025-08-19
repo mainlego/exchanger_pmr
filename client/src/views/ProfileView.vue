@@ -30,7 +30,15 @@
           <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-6">
             <div class="flex items-center space-x-4">
               <div class="relative">
-                <div class="w-20 h-20 bg-white/20 backdrop-blur-lg rounded-full flex items-center justify-center text-3xl text-white font-bold">
+                <div v-if="user.photo_url" class="w-20 h-20 rounded-full overflow-hidden">
+                  <img 
+                    :src="user.photo_url" 
+                    :alt="user.first_name || user.username"
+                    class="w-full h-full object-cover"
+                    @error="handleImageError"
+                  />
+                </div>
+                <div v-else class="w-20 h-20 bg-white/20 backdrop-blur-lg rounded-full flex items-center justify-center text-3xl text-white font-bold">
                   {{ (user.first_name || user.username || 'U')[0].toUpperCase() }}
                 </div>
                 <div v-if="user.is_verified" class="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
@@ -177,6 +185,22 @@
           </div>
         </div>
         
+        <!-- Report Section -->
+        <div class="bg-white rounded-2xl shadow-xl p-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Подать жалобу</h3>
+          <button 
+            @click="showReportModal = true"
+            class="w-full p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+          >
+            <div class="flex items-center justify-center">
+              <svg class="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+              <span class="font-medium text-red-600">Сообщить о проблеме</span>
+            </div>
+          </button>
+        </div>
+        
         <!-- Settings -->
         <div class="bg-white rounded-2xl shadow-xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-4">Настройки</h3>
@@ -209,7 +233,7 @@
               </div>
             </button>
             
-            <button @click="logout" class="w-full p-3 bg-red-50 rounded-lg text-left hover:bg-red-100 transition-colors">
+            <button @click="logout" class="w-full p-3 bg-gray-50 rounded-lg text-left hover:bg-gray-100 transition-colors">
               <div class="flex items-center">
                 <svg class="w-5 h-5 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -219,6 +243,74 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+    
+    <!-- Report Modal -->
+    <div v-if="showReportModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Подать жалобу</h3>
+        
+        <form @submit.prevent="submitReport" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Тип жалобы</label>
+            <select v-model="reportData.type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+              <option value="">Выберите тип</option>
+              <option value="user">Жалоба на пользователя</option>
+              <option value="deal">Жалоба на сделку</option>
+              <option value="review">Жалоба на отзыв</option>
+              <option value="other">Другое</option>
+            </select>
+          </div>
+          
+          <div v-if="reportData.type === 'user'">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Username пользователя</label>
+            <input 
+              v-model="reportData.targetUsername" 
+              type="text" 
+              placeholder="@username"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          
+          <div v-if="reportData.type === 'deal'">
+            <label class="block text-sm font-medium text-gray-700 mb-2">ID сделки</label>
+            <input 
+              v-model="reportData.dealId" 
+              type="text" 
+              placeholder="Введите ID сделки"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Описание проблемы</label>
+            <textarea 
+              v-model="reportData.description" 
+              required
+              rows="4"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              placeholder="Опишите проблему подробно..."
+            ></textarea>
+          </div>
+          
+          <div class="flex space-x-3">
+            <button 
+              type="submit"
+              :disabled="submittingReport"
+              class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50"
+            >
+              {{ submittingReport ? 'Отправка...' : 'Отправить жалобу' }}
+            </button>
+            <button 
+              type="button"
+              @click="closeReportModal"
+              class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300"
+            >
+              Отмена
+            </button>
+          </div>
+        </form>
       </div>
     </div>
     
@@ -241,6 +333,14 @@ const loading = ref(false);
 const reviews = ref([]);
 const activeOffersCount = ref(0);
 const reviewsCount = ref(0);
+const showReportModal = ref(false);
+const submittingReport = ref(false);
+const reportData = ref({
+  type: '',
+  targetUsername: '',
+  dealId: '',
+  description: ''
+});
 
 onMounted(async () => {
   await loadUserData();
@@ -291,6 +391,51 @@ function formatDate(date) {
     month: 'short',
     year: 'numeric'
   });
+}
+
+function handleImageError(event) {
+  // Скрываем изображение если оно не загрузилось
+  event.target.style.display = 'none';
+}
+
+async function submitReport() {
+  if (!reportData.value.description.trim()) return;
+  
+  submittingReport.value = true;
+  
+  try {
+    const response = await api.post('/reports', {
+      type: reportData.value.type,
+      target_username: reportData.value.targetUsername,
+      deal_id: reportData.value.dealId,
+      description: reportData.value.description,
+      reporter_id: user.value._id || user.value.id,
+      reporter_username: user.value.username
+    });
+    
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.showAlert('Жалоба отправлена. Мы рассмотрим её в ближайшее время.');
+    }
+    
+    closeReportModal();
+  } catch (error) {
+    console.error('Submit report error:', error);
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.showAlert('Ошибка при отправке жалобы. Попробуйте позже.');
+    }
+  } finally {
+    submittingReport.value = false;
+  }
+}
+
+function closeReportModal() {
+  showReportModal.value = false;
+  reportData.value = {
+    type: '',
+    targetUsername: '',
+    dealId: '',
+    description: ''
+  };
 }
 
 function logout() {

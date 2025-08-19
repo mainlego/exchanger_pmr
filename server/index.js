@@ -71,6 +71,7 @@ app.use('/api/offers', offersRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/deals', dealsRoutes);
 app.use('/api/reviews', reviewsRoutes);
+app.use('/api/reports', require('./routes/reports'));
 
 // Health check
 app.get('/health', (req, res) => {
