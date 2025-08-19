@@ -201,44 +201,19 @@
           </button>
         </div>
         
-        <!-- Settings -->
+        <!-- Quick Actions -->
         <div class="bg-white rounded-2xl shadow-xl p-6">
-          <h3 class="text-lg font-bold text-gray-900 mb-4">Настройки</h3>
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Действия</h3>
           <div class="space-y-3">
-            <button class="w-full p-3 bg-gray-50 rounded-lg text-left hover:bg-gray-100 transition-colors">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 text-gray-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-                  </svg>
-                  <span class="font-medium">Изменить пароль</span>
-                </div>
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </div>
-            </button>
-            
-            <button class="w-full p-3 bg-gray-50 rounded-lg text-left hover:bg-gray-100 transition-colors">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 text-gray-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                  </svg>
-                  <span class="font-medium">Уведомления</span>
-                </div>
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </div>
-            </button>
-            
-            <button @click="logout" class="w-full p-3 bg-gray-50 rounded-lg text-left hover:bg-gray-100 transition-colors">
-              <div class="flex items-center">
-                <svg class="w-5 h-5 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button 
+              @click="logout" 
+              class="w-full p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-lg hover:from-red-100 hover:to-pink-100 transition-all"
+            >
+              <div class="flex items-center justify-center">
+                <svg class="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                 </svg>
-                <span class="font-medium text-red-600">Выйти из аккаунта</span>
+                <span class="font-medium text-red-600">Выйти из приложения</span>
               </div>
             </button>
           </div>
@@ -343,21 +318,32 @@ const reportData = ref({
 });
 
 onMounted(async () => {
-  await loadUserData();
-  await loadReviews();
+  // Ждем немного, чтобы убедиться, что authStore загрузил пользователя
+  setTimeout(async () => {
+    await loadUserData();
+    await loadReviews();
+  }, 500);
 });
 
 async function loadUserData() {
   try {
     loading.value = true;
+    
+    // Убеждаемся, что у нас есть пользователь
+    if (!user.value || (!user.value._id && !user.value.id)) {
+      console.log('User not loaded yet');
+      return;
+    }
+    
+    const userId = user.value._id || user.value.id;
+    console.log('Loading data for user:', userId);
+    
     // Load user stats
-    const [offersResponse, reviewsResponse] = await Promise.all([
-      api.get('/offers/my').catch(() => ({ data: [] })),
-      api.get(`/reviews/user/${user.value._id || user.value.id}`).catch(() => ({ data: [] }))
+    const [offersResponse] = await Promise.all([
+      api.get('/offers/my').catch(() => ({ data: [] }))
     ]);
     
     activeOffersCount.value = offersResponse.data.filter(o => o.is_active).length;
-    reviewsCount.value = reviewsResponse.data.length;
   } catch (error) {
     console.error('Load user data error:', error);
   } finally {
@@ -367,10 +353,27 @@ async function loadUserData() {
 
 async function loadReviews() {
   try {
-    const response = await api.get(`/reviews/user/${user.value._id || user.value.id}`);
-    reviews.value = response.data;
+    // Убеждаемся, что у нас есть пользователь
+    if (!user.value || (!user.value._id && !user.value.id)) {
+      console.log('User not loaded for reviews');
+      return;
+    }
+    
+    const userId = user.value._id || user.value.id;
+    console.log('Loading reviews for user:', userId);
+    
+    const response = await api.get(`/reviews/user/${userId}`);
+    console.log('Reviews loaded:', response.data);
+    
+    reviews.value = response.data || [];
+    reviewsCount.value = reviews.value.length;
   } catch (error) {
     console.error('Load reviews error:', error);
+    // Если endpoint не найден, попробуем альтернативный путь
+    if (error.response?.status === 404) {
+      reviews.value = [];
+      reviewsCount.value = 0;
+    }
   }
 }
 
