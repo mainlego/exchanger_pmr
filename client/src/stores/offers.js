@@ -28,13 +28,19 @@ export const useOffersStore = defineStore('offers', () => {
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
       
       const response = await api.get('/offers', { params });
+      console.log('Raw API response:', response.data);
+      console.log('First offer from API:', response.data[0]);
       // Normalize MongoDB _id to id and preserve user_id for navigation
-      offers.value = response.data.map(offer => ({
-        ...offer,
-        id: offer._id || offer.id,
-        // Ensure user_id is preserved for navigation
-        user_id: offer.user_id
-      }));
+      offers.value = response.data.map(offer => {
+        const normalizedOffer = {
+          ...offer,
+          id: offer._id || offer.id,
+          // Ensure user_id is preserved for navigation
+          user_id: offer.user_id
+        };
+        console.log('Normalized offer:', normalizedOffer.id, 'user_id:', normalizedOffer.user_id);
+        return normalizedOffer;
+      });
     } catch (error) {
       console.error('Fetch offers error:', error);
     } finally {
