@@ -57,6 +57,13 @@ router.get('/', async (req, res) => {
         return null;
       }
       
+      // Логирование для отладки
+      console.log('Formatting offer:', {
+        offer_id: offer._id,
+        user_id: userId,
+        username: offer.user_id?.username
+      });
+      
       return {
         ...offer,
         user_id: userId, // Сохраняем ID как строку для навигации
@@ -71,6 +78,8 @@ router.get('/', async (req, res) => {
         last_seen: offer.user_id?.last_seen
       };
     }).filter(offer => offer !== null); // Фильтруем null значения
+    
+    console.log(`Returning ${formattedOffers.length} formatted offers`);
     
     res.json(formattedOffers);
   } catch (error) {
