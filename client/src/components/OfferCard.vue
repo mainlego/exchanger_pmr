@@ -1,7 +1,7 @@
 <template>
-  <router-link 
-    :to="`/offers/${offer.id}`"
-    class="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group"
+  <div 
+    @click="viewOffer"
+    class="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group cursor-pointer"
   >
     <div class="relative">
       <!-- Gradient overlay -->
@@ -76,7 +76,7 @@
         <!-- User Info with Rating -->
         <div class="flex items-center justify-between pt-3 border-t border-gray-100">
           <div 
-            @click.stop="viewUserProfile" 
+            @click="viewUserProfile" 
             class="flex items-center space-x-3 rounded-lg p-1 -m-1 transition-colors cursor-pointer hover:bg-gray-50">
             <!-- User Avatar -->
             <div class="relative">
@@ -127,7 +127,7 @@
         </div>
       </div>
     </div>
-  </router-link>
+  </div>
 </template>
 
 <script setup>
@@ -155,7 +155,19 @@ const typeBadgeGradient = computed(() => {
     : 'bg-gradient-to-r from-blue-500 to-indigo-500';
 });
 
-function viewUserProfile() {
+function viewOffer(event) {
+  // Если клик был на блоке профиля, не переходим на страницу offer
+  if (event.defaultPrevented) {
+    return;
+  }
+  router.push(`/offers/${props.offer.id || props.offer._id}`);
+}
+
+function viewUserProfile(event) {
+  // Останавливаем всплытие события чтобы не сработал viewOffer
+  event.stopPropagation();
+  event.preventDefault();
+  
   console.log('viewUserProfile called');
   console.log('Full offer object:', props.offer);
   console.log('offer.user_id:', props.offer.user_id);
