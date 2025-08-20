@@ -31,7 +31,9 @@ export const useUsersStore = defineStore('users', {
         }
 
         // Fetch from API
-        const response = await api.get(`/users/${userId}`);
+        const url = `/users/${userId}`;
+        console.log('Fetching user from:', url, 'with baseURL:', api.defaults.baseURL);
+        const response = await api.get(url);
         const user = response.data;
         
         // Cache the user
@@ -40,6 +42,11 @@ export const useUsersStore = defineStore('users', {
         return user;
       } catch (error) {
         console.error('Error fetching user:', error.message);
+        if (error.response) {
+          console.error('Error status:', error.response.status);
+          console.error('Error URL:', error.response.config?.url);
+          console.error('Full URL:', error.response.config?.baseURL + error.response.config?.url);
+        }
         this.error = error.message;
         
         // Return null instead of throwing to prevent component errors

@@ -4,9 +4,12 @@ import axios from 'axios';
 const getApiUrl = () => {
   // In production, use the actual API URL
   if (window.location.hostname !== 'localhost') {
-    return 'https://p2p-exchange-api.onrender.com/api';
+    const url = 'https://p2p-exchange-api.onrender.com/api';
+    console.log('Using production API URL:', url);
+    return url;
   }
   // In development, use proxy
+  console.log('Using development API URL: /api');
   return '/api';
 };
 
