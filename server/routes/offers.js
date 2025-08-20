@@ -43,7 +43,20 @@ router.get('/', async (req, res) => {
 
     // Форматируем ответ - сохраняем user_id как строку для навигации
     const formattedOffers = offers.map(offer => {
-      const userId = offer.user_id?._id?.toString() || offer.user_id?.toString();
+      // Проверяем, что user_id существует после populate
+      if (!offer.user_id) {
+        console.warn('Offer without user_id found:', offer._id);
+        return null; // Пропускаем предложения без пользователя
+      }
+      
+      const userId = offer.user_id._id?.toString() || offer.user_id.toString();
+      
+      // Дополнительная проверка на валидность userId
+      if (!userId || userId === 'undefined' || userId === 'null') {
+        console.warn('Invalid user_id for offer:', offer._id, 'user_id:', userId);
+        return null;
+      }
+      
       return {
         ...offer,
         user_id: userId, // Сохраняем ID как строку для навигации
@@ -57,7 +70,7 @@ router.get('/', async (req, res) => {
         is_online: offer.user_id?.is_online,
         last_seen: offer.user_id?.last_seen
       };
-    });
+    }).filter(offer => offer !== null); // Фильтруем null значения
     
     res.json(formattedOffers);
   } catch (error) {
@@ -120,10 +133,19 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     // Форматируем ответ для frontend - сохраняем user_id как строку для навигации
-    const userId = populatedOffer.user_id?._id?.toString() || populatedOffer.user_id?.toString();
+    let userId = null;
+    
+    // Проверяем, что user_id существует после populate
+    if (populatedOffer.user_id) {
+      userId = populatedOffer.user_id._id?.toString() || populatedOffer.user_id.toString();
+    }
+    
+    // Логируем для отладки
+    console.log('Created offer user_id:', userId);
+    
     const responseOffer = {
       ...populatedOffer,
-      user_id: userId, // Сохраняем ID как строку для навигации
+      user_id: userId || req.user.id, // Используем ID из токена если populate не сработал
       username: populatedOffer.user_id?.username,
       first_name: populatedOffer.user_id?.first_name,
       last_name: populatedOffer.user_id?.last_name,
@@ -162,7 +184,19 @@ router.get('/:id', async (req, res) => {
     await Offer.findByIdAndUpdate(id, { $inc: { views_count: 1 } });
 
     // Форматируем ответ - сохраняем user_id как строку для навигации
-    const userId = offer.user_id?._id?.toString() || offer.user_id?.toString();
+    let userId = null;
+    
+    // Проверяем, что user_id существует после populate
+    if (offer.user_id) {
+      userId = offer.user_id._id?.toString() || offer.user_id.toString();
+    }
+    
+    // Если нет user_id, возвращаем ошибку
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      console.error('Offer has invalid user_id:', offer._id, 'user_id:', userId);
+      return res.status(404).json({ error: 'Offer user not found' });
+    }
+    
     const formattedOffer = {
       ...offer,
       user_id: userId, // Сохраняем ID как строку для навигации

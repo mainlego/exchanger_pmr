@@ -7,6 +7,12 @@ const bot = new Telegraf(process.env.BOT_TOKEN || '8200049903:AAETV6_6XOLA6SP-ja
 const API_URL = process.env.API_URL || 'http://localhost:5000/api';
 const WEB_APP_URL = process.env.WEB_APP_URL || 'https://p2p-exchange-pmr.onrender.com';
 
+// Bot instance management
+let botLaunched = false;
+let isShuttingDown = false;
+let retryCount = 0;
+const MAX_RETRIES = 5;
+
 // Start command
 bot.start((ctx) => {
   const welcomeMessage = `
@@ -187,14 +193,39 @@ console.log('Environment:', {
 
 // Function to start bot with proper cleanup
 async function startBot() {
+  // Prevent multiple instances
+  if (botLaunched) {
+    console.log('Bot already launched, skipping...');
+    return;
+  }
+  
+  if (isShuttingDown) {
+    console.log('Bot is shutting down, skipping start...');
+    return;
+  }
+  
   try {
-    // First, delete any existing webhook
-    console.log('Deleting webhook...');
-    await bot.telegram.deleteWebhook({ drop_pending_updates: true });
-    console.log('Webhook deleted');
+    console.log(`Starting bot (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
     
-    // Wait a bit to ensure cleanup
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // First, try to stop any existing bot instance
+    try {
+      await bot.stop();
+      console.log('Stopped any existing bot instance');
+    } catch (stopError) {
+      // Ignore stop errors - bot might not be running
+    }
+    
+    // Delete any existing webhook with longer timeout
+    console.log('Deleting webhook...');
+    try {
+      await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+      console.log('Webhook deleted');
+    } catch (webhookError) {
+      console.error('Webhook deletion error (continuing anyway):', webhookError.message);
+    }
+    
+    // Wait longer to ensure cleanup
+    await new Promise(resolve => setTimeout(resolve, 5000));
     
     // Now start with polling
     await bot.launch({
@@ -202,17 +233,41 @@ async function startBot() {
       allowedUpdates: [] // Receive all update types
     });
     
+    botLaunched = true;
     console.log('🤖 Bot started successfully in polling mode');
+    retryCount = 0; // Reset retry count on success
   } catch (error) {
     console.error('Failed to start bot:', error);
+    botLaunched = false;
+    retryCount++;
+    
+    if (retryCount >= MAX_RETRIES) {
+      console.error(`Max retries (${MAX_RETRIES}) reached. Please check:`);
+      console.error('1. Only one instance of the bot is running');
+      console.error('2. The bot token is correct');
+      console.error('3. No other services are using the same bot token');
+      process.exit(1);
+    }
     
     if (error.response?.error_code === 409) {
-      console.error('Conflict detected. Waiting 10 seconds before retry...');
-      setTimeout(() => startBot(), 10000);
+      console.error('Conflict: Another bot instance is using the same token.');
+      const delay = 15 + retryCount * 5;
+      console.error(`Waiting ${delay} seconds before retry...`);
+      
+      // Try aggressive cleanup
+      try {
+        await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+        await bot.stop();
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
+      
+      setTimeout(() => startBot(), delay * 1000);
     } else {
-      // For other errors, retry after 5 seconds
-      console.error('Retrying in 5 seconds...');
-      setTimeout(() => startBot(), 5000);
+      // For other errors, retry after increasing delay
+      const delay = 5 + retryCount * 3;
+      console.error(`Retrying in ${delay} seconds...`);
+      setTimeout(() => startBot(), delay * 1000);
     }
   }
 }
@@ -237,11 +292,46 @@ server.listen(PORT, () => {
 });
 
 // Enable graceful stop
-process.once('SIGINT', () => {
-  bot.stop('SIGINT');
-  server.close();
+async function gracefulShutdown(signal) {
+  console.log(`Received ${signal}, shutting down gracefully...`);
+  isShuttingDown = true;
+  
+  try {
+    // Stop the bot
+    if (botLaunched) {
+      console.log('Stopping bot...');
+      await bot.stop(signal);
+      botLaunched = false;
+      console.log('Bot stopped');
+    }
+    
+    // Close HTTP server
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+    
+    // Force exit after 10 seconds
+    setTimeout(() => {
+      console.error('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  } catch (error) {
+    console.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+}
+
+process.once('SIGINT', () => gracefulShutdown('SIGINT'));
+process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
-process.once('SIGTERM', () => {
-  bot.stop('SIGTERM');
-  server.close();
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Log but don't shutdown on unhandled rejections
 });
