@@ -10,8 +10,6 @@ export const useUsersStore = defineStore('users', {
 
   actions: {
     async fetchUser(userId) {
-      console.log('fetchUser called with userId:', userId, 'type:', typeof userId);
-      
       if (!userId) {
         console.error('fetchUser: userId is required');
         return null;
@@ -29,24 +27,19 @@ export const useUsersStore = defineStore('users', {
       try {
         // Check cache first
         if (this.users[userId]) {
-          console.log('User found in cache:', userId);
           return this.users[userId];
         }
 
         // Fetch from API
-        console.log('Fetching user from API:', `/users/${userId}`);
         const response = await api.get(`/users/${userId}`);
         const user = response.data;
-        
-        console.log('User fetched successfully:', user);
         
         // Cache the user
         this.users[userId] = user;
         
         return user;
       } catch (error) {
-        console.error('Error fetching user:', error);
-        console.error('Error response:', error.response);
+        console.error('Error fetching user:', error.message);
         this.error = error.message;
         
         // Return null instead of throwing to prevent component errors

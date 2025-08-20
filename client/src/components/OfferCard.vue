@@ -156,8 +156,6 @@ const typeBadgeGradient = computed(() => {
 });
 
 function viewUserProfile() {
-  console.log('viewUserProfile called with offer:', props.offer);
-  
   // Получаем user_id из offer
   // Сервер должен возвращать user_id как строку с ID пользователя
   let userId = props.offer.user_id;
@@ -167,21 +165,17 @@ function viewUserProfile() {
     userId = userId._id || userId.id;
   }
   
-  console.log('Extracted userId:', userId);
-  
   // Проверяем, что userId существует и валиден
   if (userId && userId !== 'undefined' && userId !== 'null' && userId !== null) {
-    console.log('Navigating to user profile:', userId);
     router.push(`/users/${userId}`);
   } else {
     console.error('Invalid user_id in offer:', {
       raw_user_id: props.offer.user_id,
       extracted_userId: userId,
-      offer_id: props.offer.id || props.offer._id,
-      full_offer: props.offer
+      offer_id: props.offer.id || props.offer._id
     });
-    // Показываем предупреждение пользователю
-    alert('Не удается открыть профиль пользователя. Данные профиля отсутствуют.');
+    // Если нет user_id, переходим на страницу самого предложения
+    router.push(`/offers/${props.offer.id || props.offer._id}`);
   }
 }
 
