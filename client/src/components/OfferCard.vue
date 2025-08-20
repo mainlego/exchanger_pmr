@@ -156,25 +156,36 @@ const typeBadgeGradient = computed(() => {
 });
 
 function viewUserProfile() {
+  console.log('viewUserProfile called');
+  console.log('Full offer object:', props.offer);
+  console.log('offer.user_id:', props.offer.user_id);
+  console.log('Type of user_id:', typeof props.offer.user_id);
+  
   // Получаем user_id из offer
   // Сервер должен возвращать user_id как строку с ID пользователя
   let userId = props.offer.user_id;
   
   // Если user_id это объект, пытаемся получить ID из него
   if (typeof userId === 'object' && userId !== null) {
+    console.log('user_id is object, extracting ID...');
     userId = userId._id || userId.id;
   }
   
+  console.log('Final userId:', userId);
+  
   // Проверяем, что userId существует и валиден
   if (userId && userId !== 'undefined' && userId !== 'null' && userId !== null) {
+    console.log('Navigating to user profile:', `/users/${userId}`);
     router.push(`/users/${userId}`);
   } else {
     console.error('Invalid user_id in offer:', {
       raw_user_id: props.offer.user_id,
       extracted_userId: userId,
-      offer_id: props.offer.id || props.offer._id
+      offer_id: props.offer.id || props.offer._id,
+      full_offer: props.offer
     });
     // Если нет user_id, переходим на страницу самого предложения
+    console.log('Falling back to offer page:', `/offers/${props.offer.id || props.offer._id}`);
     router.push(`/offers/${props.offer.id || props.offer._id}`);
   }
 }

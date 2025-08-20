@@ -177,8 +177,13 @@ const currentRates = ref([
   { pair: 'MDL/RUP', value: '0.92', change: '+0.5%', trend: 'up' }
 ]);
 
-onMounted(() => {
-  offersStore.fetchOffers();
+onMounted(async () => {
+  await offersStore.fetchOffers();
+  console.log('HomeView: Offers loaded');
+  console.log('First offer:', offersStore.activeOffers[0]);
+  if (offersStore.activeOffers[0]) {
+    console.log('First offer user_id:', offersStore.activeOffers[0].user_id);
+  }
 });
 </script>
 
